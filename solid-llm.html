@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SolidLLM — Africa's most reliable large language model platform.">
+    <title>SolidLLM — Solid Solutions Africa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        :root {
+            --x-blue: #1D9BF0;
+        }
+        * {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .x-dark {
+            background-color: #000000;
+            color: #e7e9ea;
+        }
+        .sidebar-link-dark {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-link-dark:hover {
+            background-color: #16181c;
+        }
+        .active-dark {
+            font-weight: 700;
+            color: var(--x-blue);
+        }
+        .post-button-dark {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .post-button-dark:hover {
+            background-color: #1a8cd8;
+        }
+        .chat-bubble {
+            animation: fadeIn 0.3s ease forwards;
+        }
+    </style>
+</head>
+<body class="x-dark min-h-screen flex overflow-hidden">
+    <!-- LEFT SIDEBAR (X-style – dark) -->
+    <nav class="w-72 border-r border-[#2f3336] flex flex-col h-screen fixed bg-black">
+        <!-- Logo -->
+        <div class="px-6 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#1D9BF0] text-black rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0">𝕊</div>
+            <span class="text-3xl font-black tracking-tighter text-white">Solid</span>
+            <span class="text-3xl font-black tracking-tighter text-[#1D9BF0]">LLM</span>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex-1 px-3 py-2 space-y-1">
+            <a href="../index.html" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl">
+                <i class="fa-solid fa-house w-8"></i>
+                <span>Solid Home</span>
+            </a>
+            <a href="#" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl active-dark">
+                <i class="fa-solid fa-robot w-8"></i>
+                <span>SolidLLM</span>
+            </a>
+            <a href="#" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl">
+                <i class="fa-solid fa-book w-8"></i>
+                <span>Docs & API</span>
+            </a>
+            <a href="#" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl">
+                <i class="fa-solid fa-chart-bar w-8"></i>
+                <span>Pricing</span>
+            </a>
+            <a href="#" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl">
+                <i class="fa-solid fa-language w-8"></i>
+                <span>27 African Languages</span>
+            </a>
+            <a href="#" class="sidebar-link-dark flex items-center gap-5 px-6 py-4 text-xl font-medium rounded-3xl">
+                <i class="fa-solid fa-shield-halved w-8"></i>
+                <span>Enterprise Security</span>
+            </a>
+        </div>
+
+        <!-- Compose / CTA Button -->
+        <div class="px-4 pb-6">
+            <button onclick="startDemoChat()" 
+                    class="post-button-dark w-full bg-[#1D9BF0] hover:bg-[#1a8cd8] text-white font-bold text-xl py-4 rounded-3xl flex items-center justify-center gap-3 shadow-2xl">
+                <i class="fa-solid fa-comments"></i>
+                <span>Start chatting now</span>
+            </button>
+        </div>
+
+        <!-- Bottom Profile -->
+        <div class="mt-auto border-t border-[#2f3336] p-4 flex items-center gap-3 hover:bg-[#16181c] cursor-pointer">
+            <div class="w-10 h-10 bg-gradient-to-br from-[#1D9BF0] to-white rounded-2xl flex items-center justify-center text-black text-xl font-bold">YA</div>
+            <div class="flex-1">
+                <div class="font-bold text-white">Yassin Ali</div>
+                <div class="text-[#71767b] text-sm">@realyassinali • Harare, ZW</div>
+            </div>
+            <i class="fa-solid fa-ellipsis text-2xl"></i>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA (dark) -->
+    <main class="flex-1 ml-72 max-w-3xl border-r border-[#2f3336] min-h-screen overflow-y-auto bg-black">
+        <!-- Top bar -->
+        <div class="sticky top-0 bg-black/90 backdrop-blur-lg border-b border-[#2f3336] z-50 px-6 py-4 flex items-center justify-between">
+            <h1 class="text-2xl font-bold flex items-center gap-3">
+                <span class="text-[#1D9BF0]">SolidLLM</span>
+                <span class="text-xs bg-[#1D9BF0]/10 text-[#1D9BF0] px-3 py-1 rounded-3xl font-medium">v2.4 • GA</span>
+            </h1>
+            <div class="flex items-center bg-[#16181c] rounded-3xl px-4 py-1 text-sm font-medium gap-2">
+                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                99.98% uptime • 1.4s avg latency in Harare
+            </div>
+        </div>
+
+        <!-- HERO + CHAT DEMO (rich dark) -->
+        <div class="px-8 pt-8 pb-12">
+            <div class="flex gap-12 items-start">
+                <div class="flex-1">
+                    <div class="text-[#1D9BF0] text-sm font-bold tracking-[2px]">AFRICA'S LLM</div>
+                    <h1 class="text-6xl font-black leading-none tracking-tighter text-white mb-4">
+                        The most <span class="text-[#1D9BF0]">solid</span><br>language model<br>on the continent.
+                    </h1>
+                    <p class="text-2xl text-[#71767b] max-w-md">
+                        405B parameters • Trained on 400B+ African tokens • Runs locally or in our sovereign cloud.
+                    </p>
+                    <div class="mt-10 flex items-center gap-4">
+                        <button onclick="startDemoChat()" 
+                                class="px-10 py-4 bg-[#1D9BF0] text-black font-bold text-xl rounded-3xl flex items-center gap-3">
+                            Open in browser
+                        </button>
+                        <button onclick="window.location.href='../index.html'" 
+                                class="px-10 py-4 border border-white/30 text-white font-bold text-xl rounded-3xl flex items-center gap-3 hover:bg-white/5">
+                            ← Back to main site
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-8 mt-12 text-xs uppercase">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-lock"></i> SOC 2 + GDPR + POPIA</div>
+                        <div>27 African languages supported</div>
+                        <div>Offline-first mode</div>
+                    </div>
+                </div>
+
+                <!-- Live demo chat window -->
+                <div id="demo-chat" class="w-96 bg-[#16181c] rounded-3xl border border-[#2f3336] shadow-2xl overflow-hidden flex flex-col h-[520px]">
+                    <div class="bg-[#1D9BF0] text-black px-6 py-4 font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-robot"></i>
+                        SolidLLM • Harare Cluster
+                    </div>
+                    <div class="flex-1 p-4 overflow-y-auto space-y-6 text-sm" id="chat-messages">
+                        <!-- Messages added via JS -->
+                        <div class="chat-bubble max-w-[80%] ml-auto bg-[#1D9BF0] text-black px-5 py-3 rounded-3xl rounded-tr-none">
+                            What is the current maize price in Zimbabwe?
+                        </div>
+                        <div class="chat-bubble max-w-[80%] bg-[#272c33] px-5 py-3 rounded-3xl rounded-tl-none">
+                            As of May 6, 2026, the spot price for white maize in Harare is ZWL 18,450 per 50kg bag (up 4.2% this week due to dry spell concerns).
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-[#2f3336]">
+                        <div class="flex bg-[#272c33] rounded-3xl px-6 py-3 items-center gap-3">
+                            <input id="chat-input" 
+                                   type="text" 
+                                   placeholder="Ask SolidLLM anything..." 
+                                   class="flex-1 bg-transparent outline-none text-white placeholder:text-[#71767b]">
+                            <button onclick="sendDemoMessage()" 
+                                    class="w-9 h-9 bg-[#1D9BF0] text-black rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="text-[10px] text-[#71767b] text-center mt-3">Model: solid-llm-405b-africa • Context: 128k</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURES (dark cards) -->
+        <div class="px-8 grid grid-cols-2 gap-6 pb-12">
+            <div class="bg-[#16181c] border border-[#2f3336] rounded-3xl p-8">
+                <i class="fa-solid fa-bolt text-4xl text-[#1D9BF0] mb-4"></i>
+                <h4 class="text-xl font-bold text-white">Lightning inference</h4>
+                <p class="text-[#71767b] mt-2">Under 800ms even on 405B model thanks to our custom African-optimized quantization.</p>
+            </div>
+            <div class="bg-[#16181c] border border-[#2f3336] rounded-3xl p-8">
+                <i class="fa-solid fa-language text-4xl text-[#1D9BF0] mb-4"></i>
+                <h4 class="text-xl font-bold text-white">Truly multilingual</h4>
+                <p class="text-[#71767b] mt-2">Shona, Swahili, Yoruba, Amharic, Zulu + 22 more. Zero English fallback needed.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR (dark) -->
+    <div class="w-96 hidden xl:flex flex-col border-l border-[#2f3336] bg-black p-4 gap-6 overflow-y-auto">
+        <div class="bg-[#16181c] rounded-3xl p-5 border border-[#2f3336]">
+            <h3 class="font-bold text-xl mb-4 flex items-center gap-2 text-white"><i class="fa-solid fa-chart-line"></i> Live benchmarks</h3>
+            <div class="space-y-5 text-sm">
+                <div class="flex justify-between"><span class="text-[#71767b]">MMLU (Africa)</span><span class="font-bold text-[#1D9BF0]">92.4%</span></div>
+                <div class="flex justify-between"><span class="text-[#71767b]">GSM8K (local math)</span><span class="font-bold text-[#1D9BF0]">96.8%</span></div>
+                <div class="flex justify-between"><span class="text-[#71767b]">HumanEval (code)</span><span class="font-bold text-[#1D9BF0]">89.1%</span></div>
+            </div>
+        </div>
+
+        <div class="text-xs text-[#71767b] px-2 mt-auto">
+            © 2026 Solid Solutions Africa • SolidLLM is 100% African-owned and operated.<br>
+            Data never leaves the continent.
+        </div>
+    </div>
+
+    <script>
+        // Tailwind init for both themes (already applied via classes)
+        function startDemoChat() {
+            const chat = document.getElementById('demo-chat');
+            if (chat) chat.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('chat-input').focus();
+        }
+        
+        function sendDemoMessage() {
+            const input = document.getElementById('chat-input');
+            const messages = document.getElementById('chat-messages');
+            if (!input.value.trim()) return;
+            
+            // User message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'chat-bubble max-w-[80%] ml-auto bg-[#1D9BF0] text-black px-5 py-3 rounded-3xl rounded-tr-none';
+            userMsg.textContent = input.value;
+            messages.appendChild(userMsg);
+            
+            // Simulate reply
+            setTimeout(() => {
+                const reply = document.createElement('div');
+                reply.className = 'chat-bubble max-w-[80%] bg-[#272c33] px-5 py-3 rounded-3xl rounded-tl-none';
+                reply.innerHTML = `✅ Got it. SolidLLM answer: <span class="text-[#1D9BF0]">${input.value} is handled instantly on our Harare cluster.</span>`;
+                messages.appendChild(reply);
+                messages.scrollTop = messages.scrollHeight;
+            }, 1100);
+            
+            input.value = '';
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        // Keyboard support for demo chat
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.getElementById('chat-input')) {
+                e.preventDefault();
+                startDemoChat();
+            }
+        });
+        
+        console.log('%c✅ Solid Solutions Africa + SolidLLM pages ready (X Light + X Dark theme)', 'color:#1D9BF0; font-size:13px; font-weight:700');
+    </script>
+</body>
+</html>
