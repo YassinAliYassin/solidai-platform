@@ -10,6 +10,7 @@ import SolidAIAbout from "./pages/SolidAIAbout";
 import Documentation from "./pages/Documentation";
 import BetaAccess from "./pages/BetaAccess";
 import ComingSoon from "./pages/ComingSoon";
+import PictureGallery from "./pages/PictureGallery";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/documentation" element={<Documentation />} />
         <Route path="/beta" element={<BetaAccess />} />
         <Route path="/coming-soon" element={<ComingSoon />} />
+        <Route path="/gallery" element={<PictureGallery />} />
       </Routes>
     </BrowserRouter>
   );
