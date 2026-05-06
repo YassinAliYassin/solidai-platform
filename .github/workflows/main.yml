@@ -22,74 +22,16 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          VITE_GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: Deploy to cPanel via FTP
+      - name: Verify Build
+        run: ls -R dist
+
+      - name: Sync to Webway
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: cpanel.solidsolutions.africa
-          username: solidLLM@solidsolutions.africa
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: /home/solidsol/public_html/
-        continue-on-error: true
-
-      - name: FALLBACK - Python FTP Upload (Handles Special Characters)
-        if: failure() || steps.deploy-ftp.outcome == 'failure'
-        run: |
-          python3 << 'EOF'
-          import ftplib
-          import os
-          import sys
-          
-          server = "cpanel.solidsolutions.africa"
-          username = "solidLLM@solidsolutions.africa"
-          password = os.environ.get('FTP_PASSWORD')
-          local_dir = "./dist"
-          server_dir = "/home/solidsol/public_html/"
-          
-          if not password:
-              print("ERROR: FTP_PASSWORD secret not set!")
-              sys.exit(1)
-          
-          try:
-              print(f"Connecting to {server}...")
-              ftp = ftplib.FTP(server, timeout=30)
-              ftp.login(username, password)
-              print("Connected! CWD to " + server_dir)
-              ftp.cwd(server_dir)
-              
-              # Upload all files in dist/
-              for root, dirs, files in os.walk(local_dir):
-                  for file in files:
-                      local_path = os.path.join(root, file)
-                      remote_path = os.path.relpath(local_path, local_dir)
-                      remote_dir = os.path.dirname(remote_path)
-                      
-                      # Create remote directories if needed
-                      if remote_dir != '':
-                          try:
-                              ftp.mkd(remote_dir)
-                          except:
-                              pass
-                      
-                      print(f"Uploading {remote_path}...")
-                      with open(local_path, 'rb') as f:
-                          ftp.storbinary(f'STOR {remote_path}', f)
-              
-              ftp.quit()
-              print("✅ Python FTP upload SUCCESS!")
-          except Exception as e:
-              print(f"FTP Error: {e}")
-              sys.exit(1)
-          EOF
-        env:
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-
-      - name: Verify Site Is Live
-        run: |
-          echo "Checking site status..."
-          curl -I -m 10 https://solidsolutions.africa || echo "Site check failed"
-          curl -I -m 10 http://solidsolutions.africa || echo "HTTP check failed"
-        continue-on-error: true
-
+          server-dir: ./solidsolutions.africa/
