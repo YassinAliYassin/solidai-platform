@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -9,6 +9,9 @@ import {
   faChartLine,
   faUsers
 } from '@fortawesome/free-solid-svg-icons';
+import AgentStatusBadge from '../components/solidai/AgentStatusBadge';
+import TaskProgressBar from '../components/solidai/TaskProgressBar';
+import QuickAgentSwitcher from '../components/solidai/QuickAgentSwitcher';
 
 export default function SolidAI() {
   const heroRef = useRef(null);
@@ -81,6 +84,23 @@ export default function SolidAI() {
       desc: 'Shared workspaces, role-based access, and usage analytics for teams of any size.'
     }
   ];
+
+  const agents = [
+    { id: 'agriculture', name: 'Agriculture Agent' },
+    { id: 'health', name: 'Health Agent' },
+    { id: 'education', name: 'Education Agent' },
+    { id: 'finance', name: 'Finance Agent' },
+  ];
+
+  const [selectedAgent, setSelectedAgent] = useState('agriculture');
+  const [progress, setProgress] = useState(65);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => (prev >= 100 ? 0 : prev + 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -189,6 +209,58 @@ export default function SolidAI() {
                 <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Agents Demo Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl font-bold mb-4">
+              Try <span className="gradient-text">SolidAI Agents</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Experience our sector-specific AI agents in action
+            </p>
+          </motion.div>
+
+          <div className="glass-card rounded-2xl p-8 space-y-8">
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Agent Status</h3>
+              <div className="flex flex-wrap gap-6">
+                <AgentStatusBadge status="online" agentName="Agriculture Agent" />
+                <AgentStatusBadge status="busy" agentName="Health Agent" />
+                <AgentStatusBadge status="online" agentName="Education Agent" />
+                <AgentStatusBadge status="offline" agentName="Finance Agent" />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Task Progress</h3>
+              <div className="space-y-4 max-w-2xl">
+                <TaskProgressBar taskName="Processing farm data" progress={progress} status="active" />
+                <TaskProgressBar taskName="Generating health report" progress={100} status="completed" />
+                <TaskProgressBar taskName="Analyzing education patterns" progress={45} status="active" />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Switch Agent</h3>
+              <QuickAgentSwitcher
+                agents={agents}
+                selectedAgentId={selectedAgent}
+                onSelect={setSelectedAgent}
+              />
+              <p className="text-sm text-gray-400 mt-2">
+                Currently selected: {agents.find(a => a.id === selectedAgent)?.name}
+              </p>
+            </div>
           </div>
         </div>
       </section>

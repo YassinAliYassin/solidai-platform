@@ -12,7 +12,7 @@ import {
 
 interface XSidebarProps {
   isDark?: boolean;
-  currentPage?: 'home' | 'solidllm';
+  currentPage?: 'home' | 'solidllm' | 'solidai';
 }
 
 export default function XSidebar({ isDark = false, currentPage = 'home' }: XSidebarProps) {
@@ -29,6 +29,7 @@ export default function XSidebar({ isDark = false, currentPage = 'home' }: XSide
     { id: 'solutions', icon: faBriefcase, label: 'Solutions', href: '#' },
     { id: 'products', icon: faCube, label: 'Products', href: '#' },
     { id: 'solidllm', icon: faRobot, label: 'SolidLLM', href: '/solid-llm/', active: currentPage === 'solidllm' },
+    { id: 'solidai', icon: faBolt, label: 'SolidAI', href: '/solidai', active: currentPage === 'solidai' },
     { id: 'blog', icon: faNewspaper, label: 'Blog', href: '#' },
     { id: 'about', icon: faUsers, label: 'About Africa', href: '#' },
   ];
@@ -69,11 +70,17 @@ export default function XSidebar({ isDark = false, currentPage = 'home' }: XSide
       {/* CTA Button */}
       <div className="px-4 pb-6">
         <button
-          onClick={() => window.location.href = '/solid-llm/'}
+          onClick={() => {
+            if (currentPage === 'solidllm') window.location.href = '/solid-llm/';
+            else if (currentPage === 'solidai') window.location.href = '/solidai';
+            else window.location.href = '/solid-llm/';
+          }}
           className="w-full bg-[#1D9BF0] hover:bg-[#1a8cd8] text-white font-bold text-xl py-4 rounded-3xl flex items-center justify-center gap-3 shadow-lg transition-all duration-200"
         >
-          <FontAwesomeIcon icon={currentPage === 'solidllm' ? faComment : faRocket} />
-          <span>{currentPage === 'solidllm' ? 'Start chatting now' : 'Launch SolidLLM'}</span>
+          <FontAwesomeIcon icon={currentPage === 'solidllm' ? faComment : currentPage === 'solidai' ? faBolt : faRocket} />
+          <span>
+            {currentPage === 'solidllm' ? 'Start chatting now' : currentPage === 'solidai' ? 'Launch SolidAI' : 'Launch SolidLLM'}
+          </span>
         </button>
       </div>
 
