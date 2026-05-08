@@ -301,10 +301,10 @@ export default function Home() {
             exit={{ opacity: 0 }}
           >
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 bg-white ${isScrolled ? 'backdrop-blur-lg border-b border-black/5 py-4' : 'py-6'}`}>
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-bg-main/80 backdrop-blur-lg border-b border-black/5 py-6' : 'bg-transparent py-8'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <Logo className="h-8 w-auto" />
+            <Logo className="h-24 w-auto" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-500">
             <a href="#about" className="hover:text-charcoal transition-colors">About</a>
