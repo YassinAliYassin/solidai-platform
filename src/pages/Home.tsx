@@ -427,8 +427,8 @@ export default function Home() {
               <p className="text-xl text-white/70 leading-relaxed mb-12 font-medium max-w-xl">
                 Developing specialized large language models and cognitive systems designed to understand and process the unique linguistic and structural complexities of African environments.
               </p>
-              <a href="/solid-llm" className="inline-flex items-center gap-3 px-8 py-4 bg-white text-charcoal font-black uppercase tracking-widest text-xs rounded shadow-2xl hover:scale-105 transition-all">
-                Access Solid AI <ArrowRight size={16} />
+              <a href="/solidai" className="inline-flex items-center gap-3 px-8 py-4 bg-white text-charcoal font-black uppercase tracking-widest text-xs rounded shadow-2xl hover:scale-105 transition-all">
+                Explore SolidAI <ArrowRight size={16} />
               </a>
             </motion.div>
             
@@ -493,8 +493,15 @@ export default function Home() {
               href="/solid-llm"
             />
             <Card 
+              title="SolidAI Platform" 
+              description="OpenAI-style AI platform with dark mode UI. Build intelligent applications with state-of-the-art language models." 
+              icon={Brain}
+              highlight
+              href="/solidai"
+            />
+            <Card 
               title="Hardware Innovation" 
-              description="Exploring future smartphone assembly and embedded systems development to strengthen Africa’s hardware ecosystem." 
+              description="Exploring future smartphone assembly and embedded systems development to strengthen Africa's hardware ecosystem." 
               icon={Smartphone}
               highlight
               onClick={() => handleOpenDetail('hardware')}
