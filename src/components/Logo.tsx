@@ -3,7 +3,7 @@ import { ImgHTMLAttributes } from "react";
 export default function Logo({ className, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
   return (
     <img 
-      src="/images/logo.jpg" 
+      src="/images/logo.svg" 
       alt="Solid Solutions Logo"
       className={className}
       {...props}
