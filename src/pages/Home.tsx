@@ -26,6 +26,7 @@ import {
 import { useState, useEffect, type ReactNode } from "react";
 import Lenis from "lenis";
 import Footer from '../components/Footer';
+import Logo from '../components/Logo';
 
 
 const SectionTitle = ({ children, subtitle }: { children: ReactNode, subtitle?: string }) => (
@@ -303,13 +304,7 @@ export default function Home() {
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-bg-main/80 backdrop-blur-lg border-b border-black/5 py-4' : 'bg-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 bg-charcoal rounded flex items-center justify-center transition-transform group-hover:rotate-12">
-              <div className="w-3.5 h-3.5 border-2 border-white rounded-sm"></div>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-base font-black tracking-tight text-charcoal uppercase">SOLID</span>
-              <span className="text-[10px] font-black tracking-[0.3em] text-slate-400 -mt-0.5 ml-0.5">SOLUTIONS</span>
-            </div>
+            <Logo className="h-8 w-auto" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-500">
             <a href="#about" className="hover:text-charcoal transition-colors">About</a>
