@@ -12,6 +12,7 @@ import {
 import AgentStatusBadge from '../components/solidai/AgentStatusBadge';
 import TaskProgressBar from '../components/solidai/TaskProgressBar';
 import QuickAgentSwitcher from '../components/solidai/QuickAgentSwitcher';
+import { ChatBot } from '../components/ChatBot';
 
 export default function SolidAI() {
   const heroRef = useRef(null);
@@ -264,6 +265,9 @@ export default function SolidAI() {
           </div>
         </div>
       </section>
+
+      {/* ChatBot Component */}
+      <ChatBot />
 
       {/* CTA Section */}
       <section className="py-20 px-6">
