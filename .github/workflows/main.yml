@@ -27,11 +27,12 @@ jobs:
       - name: Verify Build
         run: ls -R dist
 
-      - name: Sync to Webway
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Deploy to cPanel via SFTP
+        uses: easingthemes/ssh-deploy@v4.1.9
         with:
-          server: 102.208.231.15
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: ./solidsolutions.africa/
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: 102.208.231.15
+          REMOTE_USER: solidsol
+          SOURCE: "dist/"
+          TARGET: "/home/solidsol/solidsolutions.africa"
+          ARGS: "-o StrictHostKeyChecking=no"
