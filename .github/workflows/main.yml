@@ -28,10 +28,11 @@ jobs:
         run: ls -R dist
 
       - name: Deploy to cPanel via rsync/SSH
-        uses: easingthemes/ssh-deploy@v4.1.9
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: 102.208.231.15
-          REMOTE_USER: solidsol
-          SOURCE: "dist/"
-          TARGET: "/home/solidsol/solidsolutions.africa"
+          host: 102.208.231.15
+          username: solidsol
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /home/solidsol/solidsolutions.africa
+            rsync -avz --delete /home/runner/work/solidai-platform/solidai-platform/dist/ /home/solidsol/solidsolutions.africa/
