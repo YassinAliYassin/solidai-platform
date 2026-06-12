@@ -27,12 +27,12 @@ jobs:
       - name: Verify Build
         run: ls -R dist
 
-      - name: Deploy to cPanel via rsync/SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy to cPanel via SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          host: 102.208.231.15
-          username: solidsol
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            mkdir -p /home/solidsol/solidsolutions.africa
-            rsync -avz --delete /home/runner/work/solidai-platform/solidai-platform/dist/ /home/solidsol/solidsolutions.africa/
+          protocol: sftp
+          server: 102.208.231.15
+          username: solid
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /home/solid/solidsolutions.africa/
