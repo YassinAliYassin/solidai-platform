@@ -29,6 +29,7 @@ jobs:
 
       - name: Deploy to cPanel via SFTP
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lftp
-          lftp -c "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no'; open -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.15; mirror --reverse --delete ./dist/ /home/solid/solidsolutions.africa/; bye"
+          rm -rf /tmp/solid-solutions-deploy
+          mkdir -p /tmp/solid-solutions-deploy
+          cp -r dist/* /tmp/solid-solutions-deploy/
+          sshpass -p "${{ secrets.FTP_PASSWORD }}" scp -o StrictHostKeyChecking=no -r /tmp/solid-solutions-deploy/* solid@102.208.231.15:/home/solid/solidsolutions.africa/
