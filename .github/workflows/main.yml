@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Get Code
         uses: actions/checkout@v4
@@ -28,11 +28,18 @@ jobs:
       - name: Verify Build
         run: ls -R dist
 
+      - name: Install lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
       - name: Deploy to cPanel via SFTP
         run: |
-          cd dist
-          sshpass -p "${{ secrets.FTP_PASSWORD }}" sftp -o StrictHostKeyChecking=no -o BatchMode=no solid@102.208.231.15 <<'EOF'
-          cd /home/solid/solidsolutions.africa
-          put -r *
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          open -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.15;
+          cd /home/solid/solidsolutions.africa;
+          rm -rf *;
+          put -r ./dist/.;
           bye
-          EOF
+          "
