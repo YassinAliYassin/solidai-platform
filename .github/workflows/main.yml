@@ -27,9 +27,12 @@ jobs:
       - name: Verify Build
         run: ls -R dist
 
-      - name: Deploy to cPanel via SFTP
-        run: |
-          rm -rf /tmp/solid-solutions-deploy
-          mkdir -p /tmp/solid-solutions-deploy
-          cp -r dist/* /tmp/solid-solutions-deploy/
-          sshpass -p "${{ secrets.FTP_PASSWORD }}" scp -o StrictHostKeyChecking=no -r /tmp/solid-solutions-deploy/* solid@102.208.231.15:/home/solid/solidsolutions.africa/
+      - name: Deploy to cPanel via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          protocol: ftps
+          server: 102.208.231.15
+          username: solid
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /home/solid/solidsolutions.africa/
