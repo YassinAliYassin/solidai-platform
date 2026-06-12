@@ -28,11 +28,7 @@ jobs:
         run: ls -R dist
 
       - name: Deploy to cPanel via SFTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          protocol: sftp
-          server: 102.208.231.15
-          username: solid
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: /home/solid/solidsolutions.africa/
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+          lftp -c "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no'; open -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.15; mirror --reverse --delete ./dist/ /home/solid/solidsolutions.africa/; bye"
