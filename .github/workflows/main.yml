@@ -34,12 +34,13 @@ jobs:
 
       - name: Deploy to cPanel via SFTP
         run: |
-          lftp -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.15 -e "
-            set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
-            set net:max-retries 5;
-            set net:timeout 60;
-            set net:reconnect-interval-base 5;
+          lftp -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.11 -e "
+            set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no -p 22';
+            set net:max-retries 10;
+            set net:timeout 30;
+            set net:reconnect-interval-base 2;
+            set net:reconnect-interval-multiplier 1;
             cd /home/solid/solidsolutions.africa;
-            mirror -R ./dist .;
+            mirror -R --delete --verbose ./dist .;
             bye
           "
