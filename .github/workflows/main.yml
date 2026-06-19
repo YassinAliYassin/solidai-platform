@@ -40,7 +40,6 @@ jobs:
             set net:timeout 60;
             set net:reconnect-interval-base 5;
             cd /home/solid/solidsolutions.africa;
-            rm -rf *;
             mirror -R ./dist .;
             bye
           "
