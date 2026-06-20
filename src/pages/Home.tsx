@@ -920,7 +920,6 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-            {/* Footer */}
       <Footer setActiveModal={setActiveModal} />
 
           </motion.div>

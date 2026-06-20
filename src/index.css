@@ -48,3 +48,23 @@
 .rotate-y-180 {
   transform: rotateY(180deg);
 }
+
+/* SolidAI Page Styles */
+.gradient-text {
+  background: linear-gradient(90deg, #165dff 0%, #7b61ff 25%, #a855f7 50%, #ec4899 75%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% auto;
+  animation: gradient 5s ease infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+.glow {
+  box-shadow: 0 0 40px rgba(22, 93, 255, 0.15);
+}

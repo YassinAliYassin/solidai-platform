@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://solidai.solidsolutions.africa/sitemap.xml

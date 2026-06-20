@@ -17,42 +17,6 @@ import { ChatBot } from '../components/ChatBot';
 export default function SolidAI() {
   const heroRef = useRef(null);
 
-  useEffect(() => {
-    // Gradient animation for text
-    const style = document.createElement('style');
-    style.textContent = `
-      .gradient-text {
-        background: linear-gradient(90deg, #165dff 0%, #7b61ff 25%, #a855f7 50%, #ec4899 75%, #ef4444 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        background-size: 200% auto;
-        animation: gradient 5s ease infinite;
-      }
-      @keyframes gradient {
-        0% { background-position: 0% center; }
-        50% { background-position: 100% center; }
-        100% { background-position: 0% center; }
-      }
-      .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-      }
-      .glass-card:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(22, 93, 255, 0.5);
-        transform: translateY(-4px);
-      }
-      .glow {
-        box-shadow: 0 0 40px rgba(22, 93, 255, 0.15);
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
   const features = [
     {
       icon: faBrain,
