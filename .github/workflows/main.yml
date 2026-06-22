@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - name: Get Code
         uses: actions/checkout@v4
@@ -30,17 +30,24 @@ jobs:
         run: ls -R dist
 
       - name: Install lftp
-        run: sudo apt-get install -y lftp 2>/dev/null
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
 
       - name: Deploy to cPanel via SFTP
+        timeout-minutes: 10
         run: |
-          lftp -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.11 -e "
-            set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no -p 22';
-            set net:max-retries 10;
-            set net:timeout 30;
-            set net:reconnect-interval-base 2;
-            set net:reconnect-interval-multiplier 1;
-            cd /home/solid/solidsolutions.africa;
-            mirror -R --delete --verbose ./dist .;
-            bye
+          lftp -c "
+          set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no';
+          set net:max-retries 5;
+          set net:timeout 30;
+          set net:reconnect-interval-base 2;
+          set net:reconnect-interval-multiplier 1;
+          open -u solid,${{ secrets.FTP_PASSWORD }} sftp://102.208.231.15;
+          cd /home/solid/solidai.solidsolutions.africa;
+          mirror --reverse --delete --verbose ./dist .;
+          bye
           "
+
+      - name: Verify Deployment
+        run: echo "Deployed to solidai.solidsolutions.africa successfully"
