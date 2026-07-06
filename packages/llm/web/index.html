@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solid LLM — Exclusively Powered by Hermes Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #a4c71d;
+            --dark: #0a0a0a;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-600: #666666;
+            --gray-900: #111111;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 300;
+            line-height: 1.6;
+            color: var(--dark);
+            background: white;
+        }
+        
+        /* Intro Section */
+        .intro-hero {
+            padding: 10rem 2rem 6rem;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .intro-hero h1 {
+            font-size: 4.5rem;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+        }
+        
+        .intro-hero h1 span {
+            color: var(--primary);
+        }
+        
+        .intro-hero p.subtitle {
+            font-size: 1.3rem;
+            color: var(--gray-600);
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto 4rem;
+        }
+        
+        .feature-item {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        
+        .feature-item i {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .feature-item h3 {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .feature-item p {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+        }
+        
+        .cta-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 6rem;
+        }
+        
+        .cta-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        /* Hide CTA button since chat is visible by default */
+        .cta-btn {
+            display: none;
+        }
+        
+        /* Chat Interface (visible by default) */
+        .chat-container {
+            display: block;
+            max-width: 800px;
+            margin: 0 auto 4rem;
+            border: 1px solid var(--gray-200);
+            min-height: 500px;
+            padding: 2rem;
+        }
+        
+        .chat-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .chat-messages {
+            height: 350px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem 1.2rem;
+            max-width: 70%;
+        }
+        
+        .user-msg {
+            background: var(--primary);
+            color: white;
+            margin-left: auto;
+            border-radius: 1rem 1rem 0 1rem;
+        }
+        
+        .bot-msg {
+            background: var(--gray-100);
+            margin-right: auto;
+            border-radius: 1rem 1rem 1rem 0;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--gray-200);
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        .chat-input button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 2rem;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .intro-hero h1 { font-size: 3rem; }
+            .features { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Intro Section -->
+    <section class="intro-hero">
+        <h1>Solid <span>LLM</span></h1>
+        <p class="subtitle">Exclusively powered by Hermes Intelligence — Open-source, free, autonomous AI for everyone.</p>
+        
+        <div class="features">
+            <div class="feature-item">
+                <i class="fas fa-robot"></i>
+                <h3>Hermes Exclusive</h3>
+                <p>Powered solely by Nous Research's Hermes 3 405B model</p>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-unlock"></i>
+                <h3>Open-Source & Free</h3>
+                <p>No paywalls, no subscriptions, fully transparent codebase</p>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-cogs"></i>
+                <h3>Autonomous Agency</h3>
+                <p>Solid Logic layer executes tasks without redundant prompts</p>
+            </div>
+        </div>
+        
+        <button class="cta-btn" id="startChatBtn">
+            Start Chatting Now
+        </button>
+    </section>
+
+    <!-- IoT Smart Agriculture Network Section -->
+    <section class="iot-section" style="max-width: 900px; margin: 0 auto 6rem; padding: 0 2rem;">
+        <h2 style="font-size: 2.5rem; font-weight: 500; margin-bottom: 2rem; text-align: center;">IoT Smart Agriculture Network</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;">
+            <div>
+                <p style="color: var(--gray-600); margin-bottom: 1rem;">Deploying IoT sensors and edge computing to optimize crop yields, reduce water usage, and enable real-time farm management across African agricultural regions.</p>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Soil moisture sensors</li>
+                    <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Weather stations</li>
+                    <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--primary); margin-right: 0.5rem;"></i> Edge data processing</li>
+                </ul>
+            </div>
+            <div>
+                <img src="images/iot-agriculture.svg" alt="IoT Smart Agriculture Network sensors in field" style="width: 100%; height: 300px; object-fit: cover; border: 1px solid var(--gray-200);">
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Section with Heading -->
+    <section class="ai-section" style="max-width: 900px; margin: 0 auto 6rem; padding: 0 2rem;">
+        <h2 style="font-size: 2.5rem; font-weight: 500; margin-bottom: 2rem; text-align: center;">Artificial Intelligence</h2>
+        <p style="color: var(--gray-600); text-align: center; max-width: 700px; margin: 0 auto 2rem;">Exclusively powered by Hermes Intelligence, our AI systems deliver autonomous decision-making, predictive analytics, and natural language processing for real-world applications.</p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
+            <div style="text-align: center; padding: 1.5rem;">
+                <i class="fas fa-brain" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                <h3 style="font-weight: 500; margin-bottom: 0.5rem;">Neural Networks</h3>
+                <p style="font-size: 0.9rem; color: var(--gray-600);">Custom architectures optimized for African use cases.</p>
+            </div>
+            <div style="text-align: center; padding: 1.5rem;">
+                <i class="fas fa-robot" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                <h3 style="font-weight: 500; margin-bottom: 0.5rem;">Autonomous Systems</h3>
+                <p style="font-size: 0.9rem; color: var(--gray-600);">Self-managing infrastructure powered by Solid Logic.</p>
+            </div>
+            <div style="text-align: center; padding: 1.5rem;">
+                <i class="fas fa-chart-line" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                <h3 style="font-weight: 500; margin-bottom: 0.5rem;">Predictive Analytics</h3>
+                <p style="font-size: 0.9rem; color: var(--gray-600);">Forecast trends and optimize operations in real-time.</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Chat Interface -->
+    <section class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <h2>Solid LLM Chat</h2>
+            <p>Powered by Hermes 3 405B via OpenRouter</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-msg">
+                Hello! I'm Solid LLM, exclusively powered by Hermes Intelligence. How can I help you today?
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Type your message here...">
+            <button id="sendBtn">Send</button>
+        </div>
+    </section>
+
+    <script>
+        const startChatBtn = document.getElementById('startChatBtn');
+        const chatContainer = document.getElementById('chatContainer');
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // Send message
+        const sendMessage = async () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user-msg';
+            userMsg.textContent = message;
+            chatMessages.appendChild(userMsg);
+            
+            // Clear input
+            userInput.value = '';
+            
+            // Add loading indicator
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'message bot-msg';
+            loadingMsg.textContent = 'Thinking...';
+            chatMessages.appendChild(loadingMsg);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: message,
+                        model: 'nousresearch/hermes-3-llama-3.1-405b:free'
+                    })
+                });
+                
+                const data = await response.json();
+                const botResponse = data.response || data.error || 'No response';
+                
+                // Remove loading, add response
+                chatMessages.removeChild(loadingMsg);
+                const botMsg = document.createElement('div');
+                botMsg.className = 'message bot-msg';
+                botMsg.textContent = botResponse;
+                chatMessages.appendChild(botMsg);
+                
+            } catch (error) {
+                chatMessages.removeChild(loadingMsg);
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message bot-msg';
+                errorMsg.textContent = 'Sorry, something went wrong. Please try again.';
+                chatMessages.appendChild(errorMsg);
+            }
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        };
+        
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solid LLM - Hermes Exclusive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="max-w-4xl mx-auto p-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-600" style="font-family: Montserrat, sans-serif; font-weight: 500;">
+                Solid <span class="text-green-500">LLM</span>
+            </h1>
+            <p class="text-gray-600">Built from Scratch | Exclusively Hermes-Powered | Solid Solutions</p>
+        </header>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
+                <p class="text-green-700">
+                    <strong>Solid LLM</strong> - Our own LLM built from scratch using Transformer architecture. 
+                    Powered exclusively by Hermes Intelligence Engine.
+                </p>
+            </div>
+            
+            <div id="chat" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-50 rounded">
+                <div class="text-gray-400 text-center">Start chatting with Solid LLM (Hermes-only)...</div>
+            </div>
+            
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="prompt" 
+                    class="flex-1 px-4 py-2 border rounded-lg"
+                    placeholder="Ask Solid LLM (Hermes) anything..."
+                    onkeypress="if(event.key=='Enter') sendMessage()"
+                />
+                <button 
+                    onclick="sendMessage()"
+                    class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                >
+                    Send
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-sm text-gray-500 text-center">
+            <p><strong>Solid LLM</strong> | Built from Scratch by Solid Solutions</p>
+            <p>Architecture: Transformer | Parameters: 719K | Exclusive Model: Hermes 3 405B</p>
+        </div>
+    </div>
+    
+    <script>
+        function sendMessage() {
+            const prompt = document.getElementById('prompt').value;
+            const model = "nousresearch/hermes-3-llama-3.1-405b:free";
+            
+            if (!prompt) return;
+            
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div class="mb-2 text-right"><span class="bg-green-500 text-white px-3 py-1 rounded inline-block">${prompt}</span></div>`;
+            
+            document.getElementById('prompt').value = '';
+            
+            const loadingId = 'loading-' + Date.now();
+            chat.innerHTML += `<div id="${loadingId}" class="mb-2 text-gray-400">Solid LLM (Hermes) is thinking...</div>`;
+            chat.scrollTop = chat.scrollHeight;
+            
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, model: model })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(loadingId).remove();
+                if (data.response) {
+                    const response = data.response;
+                    chat.innerHTML += `<div class="mb-2"><span class="bg-gray-200 px-3 py-1 rounded inline-block">${response}</span></div>`;
+                } else {
+                    chat.innerHTML += `<div class="mb-2 text-red-500">Error: ${JSON.stringify(data)}</div>`;
+                }
+                chat.scrollTop = chat.scrollHeight;
+            })
+            .catch(err => {
+                document.getElementById(loadingId).remove();
+                chat.innerHTML += `<div class="mb-2 text-red-500">Error: ${err.message}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            });
+        }
+    </script>
+</body>
+</html>
