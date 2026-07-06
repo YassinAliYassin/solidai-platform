@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solid LLM | Sovereign AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; }
+        .quiet-luxury { letter-spacing: 0.08em; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl w-full px-6 py-12">
+        <!-- Header: Center-Aligned, Minimal -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-medium text-gray-600 quiet-luxury mb-2">
+                Solid <span class="text-[#a4c71d]">LLM</span>
+            </h1>
+            <p class="text-gray-400 text-sm tracking-wider">SOVEREIGN AI · HERMES-EXCLUSIVE · QUIET LUXURY</p>
+            <div class="w-16 h-px bg-[#a4c71d] mx-auto mt-4"></div>
+        </header>
+        
+        <!-- Chat Container: Minimal, Spacious -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8">
+            <div id="chat" class="h-80 overflow-y-auto mb-6 space-y-4">
+                <div class="text-gray-300 text-center text-sm">Awaiting query...</div>
+            </div>
+            
+            <!-- Input: Clean, Understated -->
+            <div class="flex gap-3">
+                <input 
+                    type="text" 
+                    id="prompt" 
+                    class="flex-1 px-5 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#a4c71d] text-gray-700 placeholder-gray-300"
+                    placeholder="Enter query..."
+                    onkeypress="if(event.key=='Enter') sendMessage()"
+                />
+                <button 
+                    onclick="sendMessage()"
+                    class="px-8 py-3 bg-[#a4c71d] text-white rounded-lg hover:bg-[#8fb018] transition-colors text-sm tracking-wide"
+                >
+                    TRANSMIT
+                </button>
+            </div>
+        </div>
+        
+        <!-- Footer: Minimal Metadata -->
+        <div class="text-center text-xs text-gray-400 space-y-1">
+            <p>ARCHITECTURE: TRANSFORMER · PARAMETERS: 719K · ENGINE: HERMES 3 405B</p>
+            <p>© 2026 SOLID SOLUTIONS · SOVEREIGN AI PLATFORM</p>
+        </div>
+    </div>
+    
+    <script>
+        const MODEL = "nousresearch/hermes-3-llama-3.1-405b:free";
+        
+        function sendMessage() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) return;
+            
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div class="flex justify-end"><span class="bg-[#a4c71d] text-white px-4 py-2 rounded-lg text-sm max-w-xs">${prompt}</span></div>`;
+            document.getElementById('prompt').value = '';
+            
+            const loadingId = 'load-' + Date.now();
+            chat.innerHTML += `<div id="${loadingId}" class="text-gray-400 text-sm">Processing...</div>`;
+            chat.scrollTop = chat.scrollHeight;
+            
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, model: MODEL })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(loadingId).remove();
+                if (data.response) {
+                    const response = data.response;
+                    chat.innerHTML += `<div class="flex justify-start"><span class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm max-w-xs">${response}</span></div>`;
+                } else {
+                    chat.innerHTML += `<div class="text-red-400 text-sm">Error: ${JSON.stringify(data)}</div>`;
+                }
+                chat.scrollTop = chat.scrollHeight;
+            })
+            .catch(err => {
+                document.getElementById(loadingId).remove();
+                chat.innerHTML += `<div class="text-red-400 text-sm">Connection Error</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            });
+        }
+    </script>
+</body>
+</html>

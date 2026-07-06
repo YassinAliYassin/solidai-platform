@@ -1,0 +1,35 @@
+# SolidAI SRE
+
+> SolidAI SRE is an open-source AI SRE platform that investigates production incidents autonomously.
+> It uses episodic memory to learn from past incidents and a Neo4j knowledge graph to map service
+> dependencies. Licensed Apache 2.0, self-hosted, and provider-agnostic via LiteLLM.
+
+## Links
+
+- Website: https://solidai-sre.in
+- Documentation: https://solidai-sre.in/docs
+- GitHub: https://github.com/swapnildahiphale/SolidAI SRE
+- Live Demo: https://demo.solidai-sre.in
+- Full knowledge dump: https://solidai-sre.in/llms-full.txt
+
+## Key Features
+
+- 46 production investigation skills (Datadog, Grafana, PagerDuty, Elasticsearch, K8s, AWS)
+- Episodic memory system that learns from every investigation
+- Neo4j knowledge graph for service topology and blast radius analysis
+- Multi-provider LLM support via LiteLLM (Claude, OpenAI, Gemini, DeepSeek, Mistral, Ollama)
+- LangGraph agent orchestration (planner, subagents, synthesizer, writeup)
+- Web console with dashboard, agent runs, memory browser, config editor
+- Slack, Microsoft Teams, Google Chat integration
+- Self-hosted, Apache 2.0 licensed
+
+## Architecture
+
+Slack / Web UI / API → sre-agent (LangGraph orchestration) → Memory System (episodic) + 46 Skills (production tools) + Knowledge Graph (Neo4j)
+
+## Quick Start
+
+git clone https://github.com/swapnildahiphale/SolidAI SRE.git
+cd SolidAI SRE
+cp .env.example .env
+make dev
