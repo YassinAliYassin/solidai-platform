@@ -1,0 +1,8 @@
+[
+  {
+    "eventId": "EVT-20260525-7432",
+    "rawInput": "EVENT: Birthday Party\nCLIENT: John Doe\nDATE: 2026-05-25\nTIME: 18:00\nLOCATION: Harare Gardens\nGUESTS: 50\nSTAFF_REQUIRED: 3\nSERVICES: Catering, Decor\nNOTES: 21st birthday",
+    "agentResponse": "**A. EVENT ID**\nEVT-20260525-7432\n\n**B. CONFIRMED BOOKING SUMMARY**\n- Event: Birthday Party\n- Client: John Doe\n- Date: 2026-05-25\n- Time: 18:00\n- Location: Harare Gardens\n- Guests: 50\n- Staff Required: 3\n- Services: Catering, Decor\n- Notes: 21st birthday\n\n**C. ASSIGNED STAFF LIST**\n- Team Leader: Mike\n- Staff: Alex, John\n- Total Staff: 3\n\n**D. CALENDAR EVENT TEXT**\nTitle: Birthday Party – John Doe – 3 Staff\nDate: May 25, 2026\nTime: 18:00\nLocation: Harare Gardens\n\nDescription:\nClient: John Doe\nEvent Type: Birthday Party\nLocation: Harare Gardens\nGuests: 50\nStaff: Mike (Team Leader), Alex, John\nServices: Catering, Decor\nNotes: 21st birthday\n\n**E. DEPLOYMENT MESSAGE**\nEVENT DEPLOYMENT\nEvent: Birthday Party\nClient: John Doe\nDate: 2026-05-25\nTime: 18:00\nLocation: Harare Gardens\nTeam Leader: Mike\nStaff: Mike, Alex, John\nArrival Time: 17:00\nDress Code: All Black",
+    "createdAt": "2026-05-20T12:46:55.355Z"
+  }
+]

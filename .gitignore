@@ -7,3 +7,18 @@ coverage/
 .env*
 !.env.example
 .vercel
+.worktrees/
+
+# Monorepo packages
+packages/**/node_modules/
+packages/**/venv/
+packages/**/env/
+packages/**/__pycache__/
+packages/**/*.pyc
+packages/**/.next/
+packages/**/dist/
+packages/**/build/
+packages/**/.superpowers/
+packages/gateway/key.pem
+packages/gateway/cert.pem
+infra/backup/config.yaml

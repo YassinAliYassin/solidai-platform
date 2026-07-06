@@ -1,0 +1,1272 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Minus,
+  RefreshCcw,
+  Clock,
+  Server,
+  Globe,
+  Activity,
+  Shield,
+  Zap,
+  ArrowUpRight,
+  Bell,
+} from "lucide-react";
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+interface ServiceSummary {
+  name: string;
+  status: string;
+  uptime_24h: number | null;
+  latency?: {
+    avg_ms: number;
+    p95_ms: number;
+    p99_ms: number;
+  };
+}
+
+interface HealthSummary {
+  status?: string;
+  timestamp?: string;
+  services?: ServiceSummary[];
+  total_services?: number;
+  healthy_count?: number;
+  degraded_count?: number;
+  down_count?: number;
+}
+
+interface ServiceHistory {
+  uptime?: {
+    uptime_pct: number | null;
+    total_checks: number;
+    healthy_count: number;
+    window_hours: number;
+  };
+  latency?: {
+    count: number;
+    avg_ms: number;
+    min_ms: number;
+    max_ms: number;
+    p50_ms: number;
+    p95_ms: number;
+    p99_ms: number;
+    window_hours: number;
+  };
+  recent?: Array<{
+    timestamp: string;
+    status: string;
+    latency_ms?: number;
+    error?: string;
+  }>;
+}
+
+interface Incident {
+  service_name: string;
+  status: string;
+  start_time: string;
+  end_time: string | null;
+  duration_seconds: number | null;
+}
+
+interface ModelHealthInfo {
+  status: string;
+  models?: Array<{
+    name: string;
+    status: string;
+    latency_ms?: number;
+    error?: string;
+  }>;
+  litellm_version?: string;
+  db?: string;
+  cache?: string | null;
+}
+
+interface SlaService {
+  name: string;
+  uptime_pct: number | null;
+  total_checks: number;
+  healthy_count: number;
+  sla_tier: string;
+  sla_label: string;
+  sla_color: string;
+}
+
+interface SlaSummaryData {
+  window_hours: number;
+  window_days: number;
+  platform_uptime_pct: number | null;
+  platform_sla_tier: string;
+  platform_sla_label: string;
+  platform_sla_color: string;
+  total_services: number;
+  services: SlaService[];
+}
+
+interface StatusData {
+  summary: HealthSummary | null;
+  history: Record<string, ServiceHistory> | null;
+  incidents: Incident[] | null;
+  model_health: ModelHealthInfo | null;
+  sla: SlaSummaryData | null;
+  generated_at: string;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+    icon: typeof CheckCircle;
+    dot: string;
+  }
+> = {
+  healthy: {
+    label: "Operational",
+    color: "text-emerald-700 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-950/40",
+    border: "border-emerald-200 dark:border-emerald-800",
+    icon: CheckCircle,
+    dot: "bg-emerald-500",
+  },
+  degraded: {
+    label: "Degraded",
+    color: "text-amber-700 dark:text-amber-400",
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    border: "border-amber-200 dark:border-amber-800",
+    icon: AlertTriangle,
+    dot: "bg-amber-500",
+  },
+  down: {
+    label: "Down",
+    color: "text-red-700 dark:text-red-400",
+    bg: "bg-red-50 dark:bg-red-950/40",
+    border: "border-red-200 dark:border-red-800",
+    icon: XCircle,
+    dot: "bg-red-500",
+  },
+  unknown: {
+    label: "Unknown",
+    color: "text-stone-500 dark:text-stone-400",
+    bg: "bg-stone-50 dark:bg-stone-800",
+    border: "border-stone-200 dark:border-stone-700",
+    icon: Minus,
+    dot: "bg-stone-400",
+  },
+  skipped: {
+    label: "Paused",
+    color: "text-stone-500 dark:text-stone-400",
+    bg: "bg-stone-50 dark:bg-stone-800",
+    border: "border-stone-200 dark:border-stone-700",
+    icon: Minus,
+    dot: "bg-stone-400",
+  },
+  not_configured: {
+    label: "Not Configured",
+    color: "text-stone-400 dark:text-stone-500",
+    bg: "bg-stone-50 dark:bg-stone-800",
+    border: "border-stone-200 dark:border-stone-700",
+    icon: Minus,
+    dot: "bg-stone-300",
+  },
+};
+
+function formatUptime(pct: number | null): string {
+  if (pct === null) return "—";
+  if (pct >= 99.99) return "99.99%";
+  if (pct >= 99.9) return `${pct.toFixed(2)}%`;
+  return `${pct.toFixed(1)}%`;
+}
+
+function formatLatency(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatRelativeTime(timestamp: string): string {
+  try {
+    const now = Date.now();
+    const then = new Date(timestamp).getTime();
+    const diff = now - then;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (seconds < 60) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  } catch {
+    return "—";
+  }
+}
+
+function uptimeColor(pct: number | null): string {
+  if (pct === null) return "text-stone-400";
+  if (pct >= 99.5) return "text-emerald-600 dark:text-emerald-400";
+  if (pct >= 98) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
+}
+
+// ── Sparkline ───────────────────────────────────────────────────────────────
+
+function Sparkline({ entries }: { entries: Array<{ status: string; latency_ms?: number }> }) {
+  if (!entries || entries.length === 0) return null;
+
+  const valid = entries.filter((e) => e.latency_ms != null);
+  if (valid.length === 0) return null;
+
+  const maxLatency = Math.max(...valid.map((e) => e.latency_ms || 0), 1);
+  const W = 160;
+  const H = 32;
+  const barW = Math.max(3, (W - entries.length + 1) / entries.length);
+
+  return (
+    <svg width={W} height={H} className="shrink-0" aria-hidden="true">
+      {entries.map((e, i) => {
+        const h = e.latency_ms ? Math.max(2, (e.latency_ms / maxLatency) * (H - 4)) + 2 : 2;
+        const x = i * (barW + 1);
+        const y = H - h;
+        const fill =
+          e.status === "healthy"
+            ? "#10b981"
+            : e.status === "degraded"
+              ? "#f59e0b"
+              : "#ef4444";
+        return (
+          <rect key={i} x={x} y={y} width={barW} height={h} rx={1} fill={fill} opacity={0.6} />
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Service Card ────────────────────────────────────────────────────────────
+
+function ServiceCard({
+  service,
+  history,
+}: {
+  service: ServiceSummary;
+  history?: ServiceHistory;
+}) {
+  const config = STATUS_CONFIG[service.status] || STATUS_CONFIG.unknown;
+  const Icon = config.icon;
+  const uptime = history?.uptime;
+  const latency = history?.latency;
+  const recent = history?.recent || [];
+
+  return (
+    <div
+      className={`rounded-xl border ${config.border} ${config.bg} p-5 transition-all hover:shadow-md`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mt-0.5">
+            <Icon className={`w-5 h-5 ${config.color}`} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-stone-900 dark:text-white truncate">
+              {service.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${config.color}`}>
+                <span className={`w-2 h-2 rounded-full ${config.dot}`} />
+                {config.label}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Uptime */}
+        <div className="text-right shrink-0">
+          <div className="text-xs text-stone-500 dark:text-stone-400">Uptime 24h</div>
+          <div className={`text-lg font-bold ${uptimeColor(service.uptime_24h)}`}>
+            {formatUptime(service.uptime_24h)}
+          </div>
+          {uptime && (
+            <div className="text-[10px] text-stone-400">
+              {uptime.healthy_count}/{uptime.total_checks} checks
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Latency + Sparkline */}
+      {latency && latency.count > 0 && (
+        <div className="mt-4 pt-3 border-t border-stone-200/50 dark:border-stone-700/50">
+          <div className="flex items-end justify-between gap-4">
+            <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-stone-400">
+              <span>
+                Avg: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(latency.avg_ms)}</strong>
+              </span>
+              <span>
+                p95: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(latency.p95_ms)}</strong>
+              </span>
+              <span>
+                p99: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(latency.p99_ms)}</strong>
+              </span>
+            </div>
+            <Sparkline entries={recent} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "Ongoing";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  return `${minutes}m`;
+}
+
+// ── Incident Timeline ───────────────────────────────────────────────────────
+
+function IncidentTimeline({ incidents }: { incidents: Incident[] | null }) {
+  if (!incidents || incidents.length === 0) {
+    return (
+      <section>
+        <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          Recent Incidents
+        </h2>
+        <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-6 text-center">
+          <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+          <p className="text-sm text-stone-600 dark:text-stone-400">
+            No incidents in the last 24 hours
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Clock className="w-4 h-4" />
+        Recent Incidents
+        <span className="ml-auto text-xs font-normal normal-case tracking-normal text-stone-400">
+          Last 24 hours
+        </span>
+      </h2>
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 divide-y divide-stone-100 dark:divide-stone-700">
+        {incidents.slice(0, 10).map((inc, i) => {
+          const isOngoing = inc.end_time === null;
+          const isDown = inc.status === "down";
+          return (
+            <div key={i} className="px-5 py-3.5 flex items-center gap-4">
+              <div
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                  isDown ? "bg-red-500" : "bg-amber-500"
+                } ${isOngoing ? "animate-pulse" : ""}`}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm text-stone-900 dark:text-white truncate">
+                    {inc.service_name}
+                  </span>
+                  <span
+                    className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                      isDown
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                    }`}
+                  >
+                    {inc.status}
+                  </span>
+                  {isOngoing && (
+                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                      Ongoing
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  {new Date(inc.start_time).toLocaleString()}
+                  {!isOngoing && inc.end_time && (
+                    <span> → {new Date(inc.end_time).toLocaleString()}</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div
+                  className={`text-sm font-semibold ${
+                    isOngoing
+                      ? "text-blue-600 dark:text-blue-400"
+                      : isDown
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {formatDuration(inc.duration_seconds)}
+                </div>
+                <div className="text-[10px] text-stone-400">duration</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── Model Health ─────────────────────────────────────────────────────────────
+
+function ModelHealthSection({ modelHealth }: { modelHealth: ModelHealthInfo | null }) {
+  if (!modelHealth) return null;
+
+  const isHealthy = modelHealth.status === "healthy" || modelHealth.status === "ok";
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Activity className="w-4 h-4" />
+        AI Model Health
+      </h2>
+      <div
+        className={`rounded-xl border ${
+          isHealthy
+            ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20"
+            : "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
+        } p-4`}
+      >
+        <div className="flex items-center gap-3 mb-3">
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${
+              isHealthy ? "bg-emerald-500" : "bg-amber-500"
+            }`}
+          />
+          <span className="text-sm font-medium text-stone-900 dark:text-white">
+            LiteLLM Proxy
+          </span>
+          <span
+            className={`text-xs ${
+              isHealthy
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-amber-700 dark:text-amber-400"
+            }`}
+          >
+            {isHealthy ? "Operational" : "Degraded"}
+          </span>
+          {modelHealth.litellm_version && (
+            <span className="text-[10px] text-stone-400 ml-auto">
+              v{modelHealth.litellm_version}
+            </span>
+          )}
+        </div>
+
+        {modelHealth.models && modelHealth.models.length > 0 && (
+          <div className="grid gap-2">
+            {modelHealth.models.map((model, i) => {
+              const modelOk = model.status === "healthy" || model.status === "ok";
+              return (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/60 dark:bg-stone-800/60 border border-stone-200/50 dark:border-stone-700/50"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      modelOk ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                  />
+                  <span className="text-sm text-stone-700 dark:text-stone-300 font-mono">
+                    {model.name}
+                  </span>
+                  {model.latency_ms != null && (
+                    <span className="text-xs text-stone-500">
+                      {formatLatency(model.latency_ms)}
+                    </span>
+                  )}
+                  {model.error && (
+                    <span className="text-xs text-red-500 ml-auto truncate max-w-[200px]">
+                      {model.error}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 mt-3 pt-2 border-t border-stone-200/50 dark:border-stone-700/50 text-[10px] text-stone-400">
+          <span>DB: {modelHealth.db || "—"}</span>
+          <span>Cache: {modelHealth.cache || "none"}</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── SLA Summary ──────────────────────────────────────────────────────────────
+
+function SlaSummarySection({ sla }: { sla: SlaSummaryData | null }) {
+  if (!sla) return null;
+
+  const tierColors: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+    platinum: {
+      bg: "bg-purple-50 dark:bg-purple-950/20",
+      border: "border-purple-200 dark:border-purple-800",
+      text: "text-purple-700 dark:text-purple-400",
+      badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+    },
+    gold: {
+      bg: "bg-amber-50 dark:bg-amber-950/20",
+      border: "border-amber-200 dark:border-amber-800",
+      text: "text-amber-700 dark:text-amber-400",
+      badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    },
+    silver: {
+      bg: "bg-stone-50 dark:bg-stone-800/50",
+      border: "border-stone-200 dark:border-stone-700",
+      text: "text-stone-600 dark:text-stone-400",
+      badge: "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400",
+    },
+    bronze: {
+      bg: "bg-orange-50 dark:bg-orange-950/20",
+      border: "border-orange-200 dark:border-orange-800",
+      text: "text-orange-700 dark:text-orange-400",
+      badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+    },
+    below_sla: {
+      bg: "bg-red-50 dark:bg-red-950/20",
+      border: "border-red-200 dark:border-red-800",
+      text: "text-red-700 dark:text-red-400",
+      badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    },
+    unknown: {
+      bg: "bg-stone-50 dark:bg-stone-800/50",
+      border: "border-stone-200 dark:border-stone-700",
+      text: "text-stone-500 dark:text-stone-400",
+      badge: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400",
+    },
+  };
+
+  const platformTier = tierColors[sla.platform_sla_tier] || tierColors.unknown;
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Shield className="w-4 h-4" />
+        SLA Summary
+        <span className="ml-auto text-xs font-normal normal-case tracking-normal text-stone-400">
+          Last {sla.window_days}d
+        </span>
+      </h2>
+
+      {/* Platform Overall SLA */}
+      <div className={`rounded-xl border ${platformTier.border} ${platformTier.bg} p-5 mb-4`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs text-stone-500 dark:text-stone-400 mb-1">Platform Uptime</div>
+            <div className={`text-3xl font-bold ${platformTier.text}`}>
+              {sla.platform_uptime_pct !== null ? `${sla.platform_uptime_pct}%` : "—"}
+            </div>
+          </div>
+          <div className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${platformTier.badge}`}>
+            {sla.platform_sla_label}
+          </div>
+        </div>
+
+        {/* SLA Tier Scale */}
+        <div className="mt-4 pt-3 border-t border-stone-200/50 dark:border-stone-700/50">
+          <div className="flex items-center gap-1">
+            {(["platinum", "gold", "silver", "bronze"] as const).map((tier) => {
+              const t = tierColors[tier];
+              const isActive = sla.platform_sla_tier === tier;
+              const thresholds: Record<string, string> = {
+                platinum: "99.95%",
+                gold: "99.9%",
+                silver: "99.0%",
+                bronze: "95.0%",
+              };
+              return (
+                <div
+                  key={tier}
+                  className={`flex-1 text-center py-1.5 rounded text-[10px] font-medium transition-all ${
+                    isActive
+                      ? `${t.badge} ring-2 ring-offset-1 ring-current`
+                      : "text-stone-400 dark:text-stone-600"
+                  }`}
+                >
+                  <div className="capitalize">{tier}</div>
+                  <div className="text-[9px] opacity-70">{thresholds[tier]}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Per-Service SLA */}
+      {sla.services.length > 0 && (
+        <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 divide-y divide-stone-100 dark:divide-stone-700">
+          {sla.services.map((svc) => {
+            const tier = tierColors[svc.sla_tier] || tierColors.unknown;
+            return (
+              <div key={svc.name} className="px-5 py-3 flex items-center gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm text-stone-900 dark:text-white truncate">
+                    {svc.name}
+                  </div>
+                  <div className="text-[10px] text-stone-400 mt-0.5">
+                    {svc.healthy_count}/{svc.total_checks} checks
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className={`text-sm font-bold ${uptimeColor(svc.uptime_pct)}`}>
+                    {formatUptime(svc.uptime_pct)}
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded shrink-0 ${tier.badge}`}
+                >
+                  {svc.sla_label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── Gateway Status ──────────────────────────────────────────────────────────
+
+function GatewayStatus({ services }: { services: ServiceSummary[] }) {
+  const gateway = services.find((s) => s.name === "SolidAI Gateway");
+
+  if (!gateway) return null;
+
+  const config = STATUS_CONFIG[gateway.status] || STATUS_CONFIG.unknown;
+  const Icon = config.icon;
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Zap className="w-4 h-4" />
+        SolidAI Gateway
+      </h2>
+      <div className={`rounded-xl border ${config.border} ${config.bg} p-5`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Icon className={`w-6 h-6 ${config.color}`} />
+            <div>
+              <div className="font-semibold text-stone-900 dark:text-white">
+                Gateway Service
+              </div>
+              <div className={`text-sm ${config.color}`}>
+                {config.label}
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-stone-500 dark:text-stone-400">Uptime 24h</div>
+            <div className={`text-lg font-bold ${uptimeColor(gateway.uptime_24h)}`}>
+              {formatUptime(gateway.uptime_24h)}
+            </div>
+          </div>
+        </div>
+        {gateway.latency && gateway.latency.avg_ms > 0 && (
+          <div className="mt-3 pt-3 border-t border-stone-200/50 dark:border-stone-700/50 flex items-center gap-4 text-xs text-stone-500 dark:text-stone-400">
+            <span>
+              Avg: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(gateway.latency.avg_ms)}</strong>
+            </span>
+            <span>
+              p95: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(gateway.latency.p95_ms)}</strong>
+            </span>
+            <span>
+              p99: <strong className="text-stone-700 dark:text-stone-300">{formatLatency(gateway.latency.p99_ms)}</strong>
+            </span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── Overall Status Banner ───────────────────────────────────────────────────
+
+function OverallBanner({ summary }: { summary: HealthSummary | null }) {
+  if (!summary) {
+    return (
+      <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-6 flex items-center gap-4">
+        <Loader />
+        <span className="text-stone-500">Loading status…</span>
+      </div>
+    );
+  }
+
+  const allHealthy = summary.status === "healthy";
+  const anyDown = (summary.down_count || 0) > 0;
+
+  let bannerBg: string;
+  let bannerBorder: string;
+  let icon: React.ReactNode;
+  let title: string;
+  let subtitle: string;
+  let iconBg: string;
+
+  if (allHealthy) {
+    bannerBg = "bg-emerald-50 dark:bg-emerald-950/30";
+    bannerBorder = "border-emerald-200 dark:border-emerald-800";
+    icon = <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />;
+    title = "All Systems Operational";
+    subtitle = `All ${summary.total_services || 0} services are running normally`;
+    iconBg = "bg-emerald-100 dark:bg-emerald-900/50";
+  } else if (anyDown) {
+    bannerBg = "bg-red-50 dark:bg-red-950/30";
+    bannerBorder = "border-red-200 dark:border-red-800";
+    icon = <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />;
+    title = "Service Disruption";
+    subtitle = `${summary.down_count} service${(summary.down_count || 0) > 1 ? "s" : ""} currently down`;
+    iconBg = "bg-red-100 dark:bg-red-900/50";
+  } else {
+    bannerBg = "bg-amber-50 dark:bg-amber-950/30";
+    bannerBorder = "border-amber-200 dark:border-amber-800";
+    icon = <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />;
+    title = "Partial Degradation";
+    subtitle = `${summary.degraded_count} service${(summary.degraded_count || 0) > 1 ? "s" : ""} experiencing issues`;
+    iconBg = "bg-amber-100 dark:bg-amber-900/50";
+  }
+
+  return (
+    <div className={`rounded-xl border ${bannerBorder} ${bannerBg} p-6 flex items-center gap-4`}>
+      <div className={`p-3 rounded-xl ${iconBg}`}>{icon}</div>
+      <div>
+        <h2 className="text-xl font-bold text-stone-900 dark:text-white">{title}</h2>
+        <p className="text-sm text-stone-600 dark:text-stone-400 mt-0.5">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div className="w-6 h-6 border-2 border-stone-300 border-t-forest rounded-full animate-spin" />
+  );
+}
+
+// ── Main Page ───────────────────────────────────────────────────────────────
+
+export default function StatusPage() {
+  const [data, setData] = useState<StatusData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sseConnected, setSseConnected] = useState(false);
+  const [webhooks, setWebhooks] = useState<Array<{ id: string; url: string; events: string[]; created_at: string }>>([]);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookEvents, setWebhookEvents] = useState("");
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [webhookSuccess, setWebhookSuccess] = useState<string | null>(null);
+  const [showWebhookForm, setShowWebhookForm] = useState(false);
+
+  // Fetch status from the API proxy
+  const fetchStatus = useCallback(async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const res = await fetch("/api/status");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setData(json);
+      setLastRefresh(new Date().toISOString());
+      setError(null);
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch status");
+    } finally {
+      setLoading(false);
+      if (isManual) setRefreshing(false);
+    }
+  }, []);
+
+  // Fetch webhook subscriptions
+  const fetchWebhooks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/webhooks");
+      if (!res.ok) return;
+      const json = await res.json();
+      setWebhooks(json.webhooks || []);
+    } catch {
+      // Silently fail — webhooks are optional
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchStatus();
+    fetchWebhooks();
+  }, [fetchStatus, fetchWebhooks]);
+
+  // SSE connection for real-time updates
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let shouldReconnect = true;
+
+    const connect = () => {
+      try {
+        eventSource = new EventSource("/api/events");
+
+        eventSource.onopen = () => {
+          setSseConnected(true);
+        };
+
+        eventSource.addEventListener("connected", () => {
+          setSseConnected(true);
+        });
+
+        eventSource.addEventListener("health.check", (evt) => {
+          try {
+            const payload = JSON.parse(evt.data);
+            // Fetch full status summary on each health check event
+            fetchStatus();
+            setLastRefresh(new Date().toISOString());
+            setSseConnected(true);
+          } catch {
+            // ignore parse errors
+          }
+        });
+
+        eventSource.addEventListener("health.public_check", () => {
+          fetchStatus();
+          setLastRefresh(new Date().toISOString());
+        });
+
+        eventSource.onerror = () => {
+          setSseConnected(false);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Reconnect after 5 seconds
+          if (shouldReconnect) {
+            reconnectTimeout = setTimeout(connect, 5000);
+          }
+        };
+      } catch {
+        // EventSource not supported or connection failed
+        setSseConnected(false);
+      }
+    };
+
+    connect();
+
+    return () => {
+      shouldReconnect = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+    };
+  }, [fetchStatus]);
+
+  // Webhook CRUD handlers
+  const handleCreateWebhook = async () => {
+    setWebhookLoading(true);
+    setWebhookError(null);
+    setWebhookSuccess(null);
+    try {
+      const events = webhookEvents
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean);
+      const res = await fetch("/api/webhooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: webhookUrl, events }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to register webhook");
+      setWebhookSuccess(`Webhook registered: ${json.id}`);
+      setWebhookUrl("");
+      setWebhookEvents("");
+      await fetchWebhooks();
+    } catch (e: any) {
+      setWebhookError(e.message || "Failed to register webhook");
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    try {
+      await fetch(`/api/webhooks/${id}`, { method: "DELETE" });
+      await fetchWebhooks();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleTestWebhook = async (id: string) => {
+    setWebhookLoading(true);
+    setWebhookError(null);
+    setWebhookSuccess(null);
+    try {
+      const res = await fetch(`/api/webhooks/${id}/test`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Test failed");
+      setWebhookSuccess(`Test sent! Status: ${json.status_code}`);
+    } catch (e: any) {
+      setWebhookError(e.message || "Test failed");
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const services = data?.summary?.services || [];
+  const history = data?.history || {};
+
+  // Group services: internal first, then public
+  const internalServices = services.filter(
+    (s) => !["Solid Solutions", "SolidAI"].includes(s.name),
+  );
+  const publicServices = services.filter((s) =>
+    ["Solid Solutions", "SolidAI"].includes(s.name),
+  );
+
+  return (
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-900">
+      {/* Header */}
+      <header className="border-b border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-forest flex items-center justify-center">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-stone-900 dark:text-white">
+                SolidAI SRE
+              </h1>
+              <p className="text-xs text-stone-500">System Status</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* SSE connection indicator */}
+            <span className={`inline-flex items-center gap-1.5 text-xs ${sseConnected ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${sseConnected ? "bg-emerald-500 animate-pulse" : "bg-stone-400"}`} />
+              {sseConnected ? "Live" : "Reconnecting…"}
+            </span>
+            {lastRefresh && (
+              <span className="text-xs text-stone-400 hidden sm:inline">
+                Updated {formatRelativeTime(lastRefresh)}
+              </span>
+            )}
+            <button
+              onClick={() => fetchStatus(true)}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        {/* Overall Status */}
+        {loading && !data ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader />
+            <span className="ml-3 text-stone-500">Loading status…</span>
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-6 text-center">
+            <XCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-700 dark:text-red-400 font-medium">Unable to load status</p>
+            <p className="text-sm text-red-500 mt-1">{error}</p>
+            <button
+              onClick={() => fetchStatus(true)}
+              className="mt-3 text-sm text-red-600 underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : (
+          <>
+            <OverallBanner summary={data?.summary || null} />
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
+                <Server className="w-5 h-5 text-stone-400 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-stone-900 dark:text-white">
+                  {data?.summary?.total_services || 0}
+                </div>
+                <div className="text-xs text-stone-500">Services</div>
+              </div>
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
+                <CheckCircle className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {data?.summary?.healthy_count || 0}
+                </div>
+                <div className="text-xs text-stone-500">Healthy</div>
+              </div>
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
+                <AlertTriangle className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {data?.summary?.degraded_count || 0}
+                </div>
+                <div className="text-xs text-stone-500">Degraded</div>
+              </div>
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-4 text-center">
+                <XCircle className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {data?.summary?.down_count || 0}
+                </div>
+                <div className="text-xs text-stone-500">Down</div>
+              </div>
+            </div>
+
+            {/* Gateway Status */}
+            <GatewayStatus services={data?.summary?.services || []} />
+
+            {/* SLA Summary */}
+            <SlaSummarySection sla={data?.sla || null} />
+
+            {/* Incident Timeline */}
+            <IncidentTimeline incidents={data?.incidents || null} />
+
+            {/* Model Health */}
+            <ModelHealthSection modelHealth={data?.model_health || null} />
+
+            {/* Public Endpoints */}
+            {publicServices.length > 0 && (
+              <section>
+                <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Public Endpoints
+                </h2>
+                <div className="grid gap-3">
+                  {publicServices.map((s) => (
+                    <ServiceCard key={s.name} service={s} history={history[s.name]} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Internal Services */}
+            {internalServices.length > 0 && (
+              <section>
+                <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Internal Services
+                </h2>
+                <div className="grid gap-3">
+                  {internalServices.map((s) => (
+                    <ServiceCard key={s.name} service={s} history={history[s.name]} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Badge Embed */}
+            <section>
+              <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <ArrowUpRight className="w-4 h-4" />
+                Embed Badge
+              </h2>
+              <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-5">
+                <div className="flex items-center gap-4 mb-4">
+                  <img
+                    src="/api/status/badge.svg"
+                    alt="System status badge"
+                    className="h-6"
+                  />
+                  <span className="text-xs text-stone-500">
+                    Real-time status badge for your README or website
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-stone-600 dark:text-stone-400">
+                    Markdown
+                  </label>
+                  <div className="relative">
+                    <pre className="bg-stone-100 dark:bg-stone-900 rounded-lg p-3 text-xs font-mono text-stone-700 dark:text-stone-300 overflow-x-auto pr-12">
+                      {`![Status](https://${typeof window !== "undefined" ? window.location.host : "localhost:3000"}/api/status/badge.svg)`}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard?.writeText(
+                          `![Status](https://${window.location.host}/api/status/badge.svg)`
+                        );
+                      }}
+                      className="absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-medium bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <label className="text-xs font-medium text-stone-600 dark:text-stone-400">
+                    HTML
+                  </label>
+                  <div className="relative">
+                    <pre className="bg-stone-100 dark:bg-stone-900 rounded-lg p-3 text-xs font-mono text-stone-700 dark:text-stone-300 overflow-x-auto pr-12">
+                      {`<img src="https://${typeof window !== "undefined" ? window.location.host : "localhost:3000"}/api/status/badge.svg" alt="Status" />`}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard?.writeText(
+                          `<img src="https://${window.location.host}/api/status/badge.svg" alt="Status" />`
+                        );
+                      }}
+                      className="absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-medium bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Webhook Subscriptions */}
+            <section>
+              <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Webhook Subscriptions
+                <span className="ml-auto text-xs font-normal normal-case tracking-normal text-stone-400">
+                  Real-time HTTP callbacks
+                </span>
+              </h2>
+              <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-5">
+                <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
+                  Register a webhook URL to receive real-time health check events via HTTP POST.
+                  Events include <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">health.check</code> (internal services) and{" "}
+                  <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">health.public_check</code> (public endpoints).
+                </p>
+
+                {/* Existing webhooks list */}
+                {webhooks.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {webhooks.map((wh) => (
+                      <div
+                        key={wh.id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-stone-50 dark:bg-stone-900 border border-stone-200/50 dark:border-stone-700/50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-mono text-stone-700 dark:text-stone-300 truncate">
+                            {wh.url}
+                          </div>
+                          <div className="text-[10px] text-stone-400 mt-0.5">
+                            ID: {wh.id}
+                            {wh.events.length > 0 && (
+                              <span> · Events: {wh.events.join(", ")}</span>
+                            )}
+                            {wh.events.length === 0 && (
+                              <span> · All events</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleTestWebhook(wh.id)}
+                          disabled={webhookLoading}
+                          className="shrink-0 px-2.5 py-1 rounded text-[10px] font-medium bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors disabled:opacity-50"
+                        >
+                          Test
+                        </button>
+                        <button
+                          onClick={() => handleDeleteWebhook(wh.id)}
+                          className="shrink-0 px-2.5 py-1 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Status messages */}
+                {webhookError && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs text-red-600 dark:text-red-400">
+                    {webhookError}
+                  </div>
+                )}
+                {webhookSuccess && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-600 dark:text-emerald-400">
+                    {webhookSuccess}
+                  </div>
+                )}
+
+                {/* Toggle form */}
+                <button
+                  onClick={() => setShowWebhookForm(!showWebhookForm)}
+                  className="text-xs font-medium text-forest hover:underline"
+                >
+                  {showWebhookForm ? "Cancel" : "+ Add webhook subscription"}
+                </button>
+
+                {/* Add webhook form */}
+                {showWebhookForm && (
+                  <div className="mt-3 space-y-3 pt-3 border-t border-stone-200 dark:border-stone-700">
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 dark:text-stone-400 block mb-1">
+                        Webhook URL <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={webhookUrl}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                        placeholder="https://example.com/webhook"
+                        className="w-full px-3 py-2 rounded-lg text-sm border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-forest/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 dark:text-stone-400 block mb-1">
+                        Event filter{" "}
+                        <span className="text-stone-400">(comma-separated, empty = all)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={webhookEvents}
+                        onChange={(e) => setWebhookEvents(e.target.value)}
+                        placeholder="health.check, health.public_check"
+                        className="w-full px-3 py-2 rounded-lg text-sm border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-forest/50"
+                      />
+                    </div>
+                    <button
+                      onClick={handleCreateWebhook}
+                      disabled={webhookLoading || !webhookUrl.trim()}
+                      className="px-4 py-2 rounded-lg text-sm font-medium bg-forest text-white hover:bg-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {webhookLoading ? "Registering…" : "Register Webhook"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="text-center pt-8 pb-4 border-t border-stone-200 dark:border-stone-700">
+              <p className="text-xs text-stone-400">
+                Powered by{" "}
+                <strong className="text-forest">SolidAI SRE</strong>{" "}
+                — Building the Future of African Tech
+              </p>
+              <p className="text-[10px] text-stone-300 dark:text-stone-600 mt-1">
+                Real-time updates via Server-Sent Events · Webhook subscriptions available
+              </p>
+            </footer>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

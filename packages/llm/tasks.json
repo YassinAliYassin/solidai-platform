@@ -1,0 +1,57 @@
+{
+  "9f822dd0-c2f6-4d06-93c3-5e33018bf312": {
+    "task": "List files in /home/yassin/solid-llm",
+    "context": {},
+    "status": "completed",
+    "result": "Error parsing plan: Max retries exceeded\n",
+    "steps": [
+      "\u2713 echo 'Error parsing plan: Max retries exceeded'"
+    ],
+    "created_at": 1777875258.024835,
+    "completed_at": 1777875294.320714
+  },
+  "c5df9d46-f693-4482-9052-ccc9456844b3": {
+    "task": "echo 'test' && pwd",
+    "context": {},
+    "status": "completed",
+    "result": "Error parsing plan: Max retries exceeded\n",
+    "steps": [
+      "\u2713 echo 'Error parsing plan: Max retries exceeded'"
+    ],
+    "created_at": 1777875341.539861,
+    "completed_at": 1777875377.4121964
+  },
+  "6207f46f-a3fc-4a29-9543-cb6878cc8d0b": {
+    "task": "echo 'test' && pwd",
+    "context": {},
+    "status": "completed",
+    "result": "Error parsing plan: Max retries exceeded\n",
+    "steps": [
+      "\u2713 echo 'Error parsing plan: Max retries exceeded'"
+    ],
+    "created_at": 1777875495.3452446,
+    "completed_at": 1777875531.357717
+  },
+  "40361e53-b375-4fa9-8cc9-8701cbfc024c": {
+    "task": "echo hello world",
+    "context": {},
+    "status": "completed",
+    "result": "Error parsing plan: API Error 401: {\"error\":{\"message\":\"Missing Authentication header\",\"code\":401}}\n",
+    "steps": [
+      "\u2713 echo 'Error parsing plan: API Error 401: {\"error\":{\"message\":\"Missing Authentication header\",\"code\":401}}'"
+    ],
+    "created_at": 1783139310.745917,
+    "completed_at": 1783139310.899523
+  },
+  "6814e628-41a0-4012-a9c2-7e3c7fa02ba2": {
+    "task": "echo connectivity test",
+    "context": {},
+    "status": "completed",
+    "result": "Error parsing plan: API Error 401: {\"error\":{\"message\":\"Missing Authentication header\",\"code\":401}}\n",
+    "steps": [
+      "\u2713 echo 'Error parsing plan: API Error 401: {\"error\":{\"message\":\"Missing Authentication header\",\"code\":401}}'"
+    ],
+    "created_at": 1783146589.5070708,
+    "completed_at": 1783146589.8017678
+  }
+}

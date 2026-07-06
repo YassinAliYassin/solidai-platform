@@ -1,32 +1,69 @@
-# SolidAI Platform
+# SolidAI
 
-AI-powered enterprise solutions for African tech infrastructure, built by [Solid Solutions](https://solidsolutions.africa).
+Unified monorepo for the SolidAI platform — AI-powered enterprise solutions for African tech infrastructure, built by [Solid Solutions](https://solidsolutions.africa).
 
-## Overview
+## Repository Structure
 
-SolidAI is a private LLM deployment and knowledge retrieval platform targeting the African market. It provides:
+| Path | Description | Former repo |
+|------|-------------|-------------|
+| `/` (root) | SolidAI marketing platform (React + Vite) | `solidai-platform` |
+| `packages/sre/` | AI SRE agent for incident investigation | `solidai-sre` |
+| `packages/llm/` | Private LLM training & inference | `solid-llm` |
+| `packages/cloud/` | Solid Cloud AI backend, frontend & MCP server | `solid-cloud-ai` |
+| `packages/gateway/` | Multi-agent gateway (Telegram, WhatsApp, web) | local only |
+| `infra/backup/` | Backup scripts and config templates | `solid-cloud-backup` |
 
-- Private LLM deployment and hosting
-- Enterprise knowledge retrieval (RAG)
-- AI-powered SRE and infrastructure monitoring
-- Custom AI integrations for African businesses
+## Quick Start
 
-## Tech Stack
-
-- React + TypeScript + Vite
-- Tailwind CSS v4
-- Framer Motion
-- cPanel deployment via GitHub Actions
-
-## Links
-
-- Website: [solidai.africa](https://solidai.africa)
-- Parent company: [Solid Solutions](https://solidsolutions.africa)
-
-## Development
+### Platform (website)
 
 ```bash
 npm install
 npm run dev    # http://localhost:3000
 npm run build  # output: dist/
 ```
+
+### SRE Agent
+
+```bash
+cd packages/sre
+cp .env.example .env
+make dev       # http://localhost:3000
+```
+
+### LLM
+
+```bash
+cd packages/llm
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python inference/api_v2.py
+```
+
+### Cloud AI
+
+```bash
+cd packages/cloud/backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+
+### Gateway
+
+```bash
+cd packages/gateway
+npm install
+cp .env.example .env   # create from template if needed
+npm start              # http://localhost:18789
+```
+
+## Links
+
+- Website: [solidai.africa](https://solidai.africa)
+- Parent company: [Solid Solutions](https://solidsolutions.africa)
+- GitHub: [YassinAliYassin/solidai-platform](https://github.com/YassinAliYassin/solidai-platform)
+
+## Migration Note
+
+All former SolidAI repositories (`solidai-sre`, `solid-llm`, `solid-cloud-backup`) have been consolidated into this monorepo. Clone this repo for the full platform.
