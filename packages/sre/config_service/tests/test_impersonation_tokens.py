@@ -122,8 +122,8 @@ def test_impersonation_token_can_read_team_config(app_admin_and_team):
     )
     assert eff.status_code == 200
     cfg = eff.json()
-    assert cfg["knowledge_source"]["grafana"] == ["org"]
-    assert cfg["knowledge_source"]["confluence"] == ["team"]
+    assert cfg["effective_config"]["knowledge_source"]["grafana"] == ["org"]
+    assert cfg["effective_config"]["knowledge_source"]["confluence"] == ["team"]
 
 
 def test_impersonation_token_cannot_write(app_admin_and_team):
