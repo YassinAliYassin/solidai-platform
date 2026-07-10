@@ -36,10 +36,10 @@ jobs:
         run: ruff check sre-agent/
 
       - name: Lint health-monitor
-        run: ruff check health-monitor/ || echo "health-monitor: no issues or skipped"
+        run: ruff check health-monitor/ || echo 'health-monitor lint skipped'
 
       - name: Lint config-service
-        run: ruff check config_service/ || echo "config_service: no issues or skipped"
+        run: ruff check config_service/ || echo 'config-service lint skipped'
 
   sre-agent-tests:
     name: sre-agent Tests
@@ -53,20 +53,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Install sre-agent dependencies
+      - name: Sync sre-agent dependencies
         run: |
           cd sre-agent
-          pip install -e ".[test]" 2>&1 | tail -5
+          uv sync --all-extras --dev
 
       - name: Run node-level unit tests
         run: |
           cd sre-agent
-          python -m pytest \
+          uv run --with pytest python -m pytest \
             tests/test_planner.py \
             tests/test_synthesizer.py \
             tests/test_writeup.py \
@@ -87,7 +85,7 @@ jobs:
       - name: Run litellm config structure tests
         run: |
           cd sre-agent
-          python -m pytest \
+          uv run --with pytest python -m pytest \
             tests/test_litellm_fallback_chain.py \
             -v --tb=short \
             -k "not TestLitellmProxyHealth" 2>&1
