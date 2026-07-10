@@ -8,9 +8,11 @@ import pytest
 @pytest.fixture(autouse=True)
 def set_encryption_key():
     """Set encryption key for tests."""
-    # Use a test-specific key
+    # Use a valid 44-char base64-encoded 32-byte Fernet key (required by
+    # EncryptionService validation). Generated deterministically so runs
+    # are reproducible.
     os.environ["ENCRYPTION_KEY"] = (
-        "test-key-for-encryption-must-be-at-least-32-bytes-long-for-fernet"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="  # 44-char base64 key
     )
     yield
     os.environ.pop("ENCRYPTION_KEY", None)
@@ -168,7 +170,7 @@ def test_encryption_service_initialization_error():
 
     from src.crypto import EncryptionError, EncryptionService
 
-    with pytest.raises(EncryptionError, match="ENCRYPTION_KEY or TOKEN_PEPPER"):
+    with pytest.raises(EncryptionError, match="ENCRYPTION_KEY must be set"):
         EncryptionService()
 
 
