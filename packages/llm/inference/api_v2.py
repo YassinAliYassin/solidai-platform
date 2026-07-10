@@ -25,11 +25,11 @@ try:
     _ckpt = _repo_root / "models" / "solid-llm-v2-simple.pth"
     try:
         model.load_state_dict(torch.load(_ckpt))
+        model.eval()
+        print("Solid LLM v2.0 loaded SUCCESSFULLY!")
     except FileNotFoundError:
         print(f"Model checkpoint not found at {_ckpt}; serving with untrained weights.")
         model = None
-    model.eval()
-    print("Solid LLM v2.0 loaded SUCCESSFULLY!")
 except Exception as e:
     print(f"Model load error: {e}")
     model = None
