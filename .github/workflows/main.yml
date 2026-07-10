@@ -129,3 +129,44 @@ jobs:
       - name: Lint
         working-directory: packages/cloud/frontend
         run: npm run lint
+
+  test-health-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        working-directory: packages/sre/health-monitor
+        run: pip install pytest pytest-asyncio
+
+      - name: Run health-monitor tests
+        working-directory: packages/sre/health-monitor
+        run: pytest -q
+
+  test-sre-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync dependencies
+        working-directory: packages/sre/sre-agent
+        run: uv sync --all-extras --dev
+
+      - name: Run sre-agent tests
+        working-directory: packages/sre/sre-agent
+        run: uv run pytest -q
