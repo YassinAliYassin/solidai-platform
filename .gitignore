@@ -22,3 +22,6 @@ packages/**/.superpowers/
 packages/gateway/key.pem
 packages/gateway/cert.pem
 infra/backup/config.yaml
+
+# Runtime artifacts
+events.db
