@@ -134,10 +134,10 @@ def test_impersonation_token_cannot_write(app_admin_and_team):
     )
     tok = r.json()["token"]
 
-    put = client.put(
+    put = client.patch(
         "/api/v1/config/me",
         headers={"Authorization": f"Bearer {tok}"},
-        json={"knowledge_source": {"google": ["drive:folder/demo"]}},
+        json={"config": {"knowledge_source": {"google": ["drive:folder/demo"]}}},
     )
     assert put.status_code == 403
 

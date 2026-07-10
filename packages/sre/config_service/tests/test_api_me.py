@@ -163,10 +163,10 @@ def test_me_audit_after_put(app_and_db):
 def test_put_me_rejects_team_name(app_and_db):
     app, token = app_and_db
     client = TestClient(app)
-    resp = client.put(
+    resp = client.patch(
         "/api/v1/config/me",
         headers={"Authorization": f"Bearer {token}"},
-        json={"team_name": "nope"},
+        json={"config": {"team_name": "nope"}},
     )
     assert resp.status_code == 400
 
@@ -176,10 +176,10 @@ def test_put_me_merges_overrides(app_and_db):
     client = TestClient(app)
 
     # add google without removing existing confluence override
-    resp = client.put(
+    resp = client.patch(
         "/api/v1/config/me",
         headers={"Authorization": f"Bearer {token}"},
-        json={"knowledge_source": {"google": ["drive:folder/demo"]}},
+        json={"config": {"knowledge_source": {"google": ["drive:folder/demo"]}}},
     )
     assert resp.status_code == 200
 
@@ -234,11 +234,11 @@ def test_me_effective_is_cached_and_invalidated_on_put(app_and_db, monkeypatch):
     assert calls["lineage"] == 1
     assert calls["configs"] == 1
 
-    # PUT bumps org epoch => effective cache key changes => recompute
-    p = client.put(
+    # PATCH bumps org epoch => effective cache key changes => recompute
+    p = client.patch(
         "/api/v1/config/me",
         headers={"Authorization": f"Bearer {token}"},
-        json={"knowledge_source": {"google": ["drive:folder/demo"]}},
+        json={"config": {"knowledge_source": {"google": ["drive:folder/demo"]}}},
     )
     assert p.status_code == 200
 
