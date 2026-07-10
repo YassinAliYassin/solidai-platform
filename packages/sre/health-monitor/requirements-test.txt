@@ -1,0 +1,7 @@
+# Test dependencies for the SolidAI SRE health monitor.
+# Runtime deps (httpx, fastapi) are listed too because the test module
+# imports monitor.py, which imports them at module load.
+pytest
+pytest-asyncio
+httpx
+fastapi
