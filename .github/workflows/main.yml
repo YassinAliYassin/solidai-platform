@@ -143,7 +143,7 @@ jobs:
 
       - name: Install test deps
         working-directory: packages/sre/health-monitor
-        run: pip install pytest pytest-asyncio
+        run: pip install pytest pytest-asyncio fastapi httpx uvicorn
 
       - name: Run health-monitor tests
         working-directory: packages/sre/health-monitor
@@ -169,4 +169,4 @@ jobs:
 
       - name: Run sre-agent tests
         working-directory: packages/sre/sre-agent
-        run: uv run pytest -q
+        run: uv run --with pytest python -m pytest -q
