@@ -18,7 +18,7 @@ app = FastAPI(title="Solid Logic v2.1", description="Autonomous Agency with Task
 
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 HERMES_MODEL = "nousresearch/hermes-3-llama-3.1-405b:free"
-TASKS_FILE = Path("/home/yassin/solid-llm/tasks.json")
+TASKS_FILE = Path(__file__).resolve().parent.parent / "tasks.json"
 
 if not OPENROUTER_API_KEY:
     import warnings

@@ -5,7 +5,10 @@ Train our LLM with custom dataset + Hermes intelligence
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pathlib import Path as _Path
+
+_REPO_ROOT = _Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
 
 import torch
 import torch.nn as nn
@@ -118,6 +121,6 @@ if __name__ == "__main__":
     trainer.train(epochs=3)
     
     # Save model
-    torch.save(model.state_dict(), '/home/yassin/solid-llm/models/solid-llm-v2.pth')
-    print("\nModel saved to: /home/yassin/solid-llm/models/solid-llm-v2.pth")
+    torch.save(model.state_dict(), str(_REPO_ROOT / "models" / "solid-llm-v2.pth"))
+    print(f"\nModel saved to: {_REPO_ROOT / 'models' / 'solid-llm-v2.pth'}")
     print("\nSolid LLM v2.0 - TRAINED AND READY!")
