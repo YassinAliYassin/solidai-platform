@@ -1,41 +1,31 @@
-# Security finding: impersonation tokens can write config (read-only not enforced)
+# config_service: remaining test failures + security finding
 
-**Severity:** Medium–High (authorization gap; advertised read-only contract not enforced)
-**Status:** Unconfirmed intent — needs owner decision (real bug vs. intended)
-**Found:** during config_service test-suite repair (test_impersonation_token_cannot_write)
+**Branch:** `fix/config-service-me-verb-tests` (pushed to origin, PR not yet opened)
+**Suite status:** 66 passed, 4 failed (was 51 passed / 19 failed at session start)
 
-## What
-`/auth/me` reports impersonation tokens as `can_write: false`, but the config
-write endpoint does not enforce it. An impersonation (read-only) token can
-successfully `PATCH /api/v1/config/me` and receive `200 OK`.
+## SECURITY FINDING (FIXED in this branch)
+Impersonation tokens were advertised read-only (`can_write=False` via
+`/auth/me`) but `PATCH /api/v1/config/me` did not enforce it (200 instead of
+403). Added `_check_write_access()` in `src/api/routes/config_v2.py` rejecting
+impersonation principals with 403; visitor writes remain allowed (playground).
+`tests/test_impersonation_tokens.py::test_impersonation_token_cannot_write`
+now passes.
 
-The test `tests/test_impersonation_tokens.py::test_impersonation_token_cannot_write`
-expects `403`, but the code returns `200`.
+Root cause file:line: `config_v2.py:40-48` (`_check_visitor_write_access` no-op)
++ `config_v2.py:1088` (write path had no impersonation gate).
 
-## Evidence (file:line)
-- `src/api/routes/auth_me.py:195` — `can_write = (auth_kind == "oidc") and (...)`,
-  so impersonation ⇒ `can_write=False` (exposed at line 206).
-- `src/api/routes/config_v2.py:1072` — `@router.patch("/me")` write endpoint.
-- `src/api/routes/config_v2.py:1088` — only calls `_check_visitor_write_access(...)`.
-- `src/api/routes/config_v2.py:40-48` — `_check_visitor_write_access` is now a
-  no-op (`pass`) — "visitors allowed to write for playground demo".
-- `src/api/routes/config_v2.py:80-82` — `_resolve_team_identity` resolves
-  impersonation tokens the same as any team principal; no write gate.
+## Remaining 4 failures — owner/product decisions (NOT mechanical)
+1. `test_admin_node_effective_and_raw` — 400: `root` org node is never created;
+   test assumes auto-create. Decide: create root in fixture or assert 404.
+2. `test_me_audit_after_put` — 404: `GET /api/v1/config/me/audit` endpoint does
+   not exist in current code. Decide: restore endpoint or remove test.
+3. `test_put_me_rejects_team_name` — 200 vs 400: `PATCH /me` no longer rejects
+   a `team_name` field. Was that validation intentionally removed?
+4. `test_me_effective_is_cached_and_invalidated_on_put` — obsolete: caching was
+   removed ("always recomputes"); test counts cache recompute calls.
 
-Net: the read-only intent (`can_write=False`) is computed and advertised but
-never checked on the write path.
-
-## Options for the owner
-1. If impersonation is meant to be read-only (matches `can_write=False`):
-   enforce it — have `PATCH /me` (and other write routes) reject when the
-   authenticated principal is impersonation / `can_write` is false → 403.
-2. If impersonation writes are intended: update the test to expect 200 and
-   reconcile the `can_write=False` advertised by `/auth/me`.
-
-## Related stale tests (same area, need decisions)
-- `test_put_me_rejects_team_name` — PATCH /me no longer rejects `team_name` (200 vs 400).
-- `test_me_effective_is_cached_and_invalidated_on_put` — caching removed
-  ("always recomputes"); test counts cache calls → obsolete.
-- `test_me_audit_after_put` — `GET /me/audit` endpoint does not exist (404).
-- `test_admin_node_effective_and_raw` — 400 because `root` node not auto-created.
-- `test_migration` — FileNotFoundError (missing migration fixture).
+## NOTE: test_migration is environment-driven, NOT a code bug
+`test_migration` invokes the `alembic` CLI via subprocess. It only fails when
+the venv lacks `alembic` (and full deps). Installing the full
+`requirements.txt` (what CI does) makes it pass. If running locally, set up
+with `pip install -r requirements.txt`, not a partial dependency subset.
