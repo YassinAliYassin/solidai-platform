@@ -48,6 +48,27 @@ def _check_visitor_write_access(authorization: str) -> None:
     pass
 
 
+def _check_write_access(authorization: str, session: Session) -> None:
+    """
+    Reject write access for read-only principals.
+
+    Impersonation tokens are explicitly read-only (see /auth/me can_write=False)
+    and must not be able to mutate configuration, even though the playground
+    allows visitor writes.
+    """
+    if not authorization or not authorization.strip():
+        return
+    try:
+        auth_kind, _, _ = authenticate_team_request(authorization, session=session)
+    except Exception:
+        return
+    if auth_kind == "impersonation":
+        raise HTTPException(
+            status_code=403,
+            detail="Impersonation tokens are read-only and cannot modify configuration",
+        )
+
+
 def _resolve_team_identity(
     authorization: str,
     x_org_id: Optional[str],
@@ -1084,8 +1105,9 @@ async def update_my_config(
 
     Auth: Supports both Bearer token (v1 style) and X-Org-Id/X-Team-Node-Id headers (v2 style).
     """
-    # Visitors cannot modify configuration
+    # Visitors cannot modify configuration; impersonation tokens are read-only
     _check_visitor_write_access(authorization)
+    _check_write_access(authorization, db)
 
     org_id, team_node_id = _resolve_team_identity(
         authorization, x_org_id, x_team_node_id, db
