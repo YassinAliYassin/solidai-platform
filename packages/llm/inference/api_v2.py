@@ -79,8 +79,10 @@ async def generate(request: GenerateRequest):
         hermes_reasoning = ""
         if request.use_hermes:
             try:
+                import shutil
+                hermes_bin = shutil.which("hermes") or "/home/yassin/.hermes/hermes-agent/venv/bin/hermes"
                 result = subprocess.run(
-                    ["/home/yassin/.hermes/hermes-agent/venv/bin/hermes", "chat", "-q", 
+                    [hermes_bin, "chat", "-q",
                      f"Provide intelligent reasoning for: {request.prompt}"],
                     capture_output=True,
                     text=True,
