@@ -14,7 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from src.api.main import create_app
 from src.core.security import hash_token
 from src.db.base import Base
-from src.db.models import NodeConfig, NodeType, OrgNode, TeamToken
+from src.db.models import NodeType, OrgNode, TeamToken
+from src.db.config_models import NodeConfiguration
 
 
 @pytest.fixture()
@@ -49,8 +50,8 @@ def app_db_team(monkeypatch):
                 name="Team A",
             )
         )
-        s.add(NodeConfig(org_id="org1", node_id="root", config_json={}, version=1))
-        s.add(NodeConfig(org_id="org1", node_id="teamA", config_json={}, version=1))
+        s.add(NodeConfiguration(id="cfg-root", org_id="org1", node_id="root", node_type="org", config_json={}, version=1))
+        s.add(NodeConfiguration(id="cfg-teamA", org_id="org1", node_id="teamA", node_type="team", config_json={}, version=1))
         s.add(
             TeamToken(
                 org_id="org1",
@@ -61,7 +62,7 @@ def app_db_team(monkeypatch):
         )
         s.commit()
 
-    from src.api.routes import auth_me, config_me
+    from src.api.routes import auth_me, config_v2
 
     def override_get_db():
         with SessionLocal() as s:
@@ -73,7 +74,7 @@ def app_db_team(monkeypatch):
                 raise
 
     app = create_app()
-    app.dependency_overrides[config_me.get_db] = override_get_db
+    app.dependency_overrides[config_v2.get_db] = override_get_db
     app.dependency_overrides[auth_me.get_db] = override_get_db
     return app
 

@@ -11,7 +11,7 @@ Usage:
 
 from typing import Optional
 
-from sqlalchemy import Text, TypeDecorator
+from sqlalchemy import JSON, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from .encryption import decrypt, decrypt_dict, encrypt, encrypt_dict
@@ -62,7 +62,7 @@ class EncryptedJSONB(TypeDecorator):
         config: Mapped[dict] = mapped_column(EncryptedJSONB, nullable=False)
     """
 
-    impl = JSONB
+    impl = JSONB().with_variant(JSON, "sqlite")
     cache_ok = True
 
     def process_bind_param(self, value: Optional[dict], dialect) -> Optional[dict]:
