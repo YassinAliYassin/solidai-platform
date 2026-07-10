@@ -1,27 +1,27 @@
 # Solid LLM - Python Dependencies
 # Install with: pip install -r requirements.txt
+#
+# Split into runtime (always needed) and optional heavy deps (only for local
+# model training/inference). The test suite (tests/) needs the runtime deps
+# plus torch; the local-Hermes engine additionally needs transformers.
 
-# Core
-torch>=2.0.0
-numpy>=1.24.0
-
-# API
+# --- Runtime (FastAPI/OpenRouter services) ---
 fastapi>=0.100.0
 uvicorn[standard]>=0.23.0
 pydantic>=2.0.0
-
-# HTTP client (for OpenRouter API)
 requests>=2.31.0
 
-# Optional: Local model inference
-# transformers>=4.36.0
+# --- Core ML (required by training/* and inference/local_hermes.py) ---
+torch>=2.0.0
+numpy>=1.24.0
+
+# --- Local model inference (inference/local_hermes.py imports this directly) ---
+transformers>=4.36.0
+tokenizers>=0.15.0
+sentencepiece>=0.1.99
+
+# --- Optional: training helpers / 4-bit quantization (uncomment if used) ---
 # accelerate>=0.25.0
-# bitsandbytes>=0.41.0  # For 4-bit quantization
-
-# Optional: Tokenization
-# tokenizers>=0.15.0
-# sentencepiece>=0.1.99
-
-# Optional: Training
+# bitsandbytes>=0.41.0
 # datasets>=2.14.0
 # wandb>=0.16.0
