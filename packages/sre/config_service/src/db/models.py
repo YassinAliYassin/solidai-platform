@@ -1610,7 +1610,9 @@ class SlackInstallation(Base):
     )
 
     # Store full installation data as JSON for future-proofing
-    raw_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    raw_data: Mapped[Optional[dict]] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
 
     __table_args__ = (
         Index(
@@ -1757,12 +1759,16 @@ class GitHubInstallation(Base):
     )
 
     # Permissions and repository access
-    permissions: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    permissions: Mapped[Optional[dict]] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
     repository_selection: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True
     )  # "all" or "selected"
     # List of repo full names (e.g., ["org/repo1", "org/repo2"])
-    repositories: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    repositories: Mapped[Optional[list]] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
 
     # Webhook secret for this installation (encrypted)
     webhook_secret: Mapped[Optional[str]] = mapped_column(EncryptedText, nullable=True)
@@ -1788,7 +1794,9 @@ class GitHubInstallation(Base):
     )
 
     # Store full installation payload for future-proofing
-    raw_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    raw_data: Mapped[Optional[dict]] = mapped_column(
+        JSONB().with_variant(JSON, "sqlite"), nullable=True
+    )
 
     __table_args__ = (
         Index("ix_github_installations_org_team", "org_id", "team_node_id"),

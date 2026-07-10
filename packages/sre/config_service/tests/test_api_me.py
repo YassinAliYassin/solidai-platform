@@ -14,7 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from src.api.main import create_app
 from src.core.security import hash_token
 from src.db.base import Base
-from src.db.models import NodeConfig, NodeType, OrgNode, TeamToken
+from src.db.models import NodeType, OrgNode, TeamToken
+from src.db.config_models import NodeConfiguration
 
 
 @pytest.fixture()
@@ -52,17 +53,21 @@ def app_and_db(monkeypatch):
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-root",
                 org_id="org1",
                 node_id="root",
+                node_type="org",
                 config_json={"knowledge_source": {"grafana": ["org"]}},
                 version=1,
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-teamA",
                 org_id="org1",
                 node_id="teamA",
+                node_type="team",
                 config_json={"knowledge_source": {"confluence": ["team"]}},
                 version=1,
             )
@@ -82,7 +87,7 @@ def app_and_db(monkeypatch):
         s.commit()
 
     # Override the DB dependency to use this sessionmaker
-    from src.api.routes import config_me
+    from src.api.routes import config_v2
 
     def override_get_db():
         with SessionLocal() as s:
@@ -94,7 +99,7 @@ def app_and_db(monkeypatch):
                 raise
 
     app = create_app()
-    app.dependency_overrides[config_me.get_db] = override_get_db
+    app.dependency_overrides[config_v2.get_db] = override_get_db
     return app, f"{token_id}.{token_secret}"
 
 
@@ -303,31 +308,35 @@ def test_me_effective_accepts_oidc(monkeypatch):
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-root",
                 org_id="org1",
                 node_id="root",
+                node_type="org",
                 config_json={"knowledge_source": {"grafana": ["org"]}},
                 version=1,
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-teamA",
                 org_id="org1",
                 node_id="teamA",
+                node_type="team",
                 config_json={"knowledge_source": {"confluence": ["team"]}},
                 version=1,
             )
         )
         s.commit()
 
-    from src.api.routes import config_me
+    from src.api.routes import config_v2
 
     def override_get_db():
         with SessionLocal() as s:
             yield s
 
     app = create_app()
-    app.dependency_overrides[config_me.get_db] = override_get_db
+    app.dependency_overrides[config_v2.get_db] = override_get_db
 
     client = TestClient(app)
     resp = client.get(
