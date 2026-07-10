@@ -81,3 +81,51 @@ jobs:
         run: |
           . .venv/bin/activate
           pytest -q
+
+  lint-web-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: packages/sre/web_ui
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: packages/sre/web_ui
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: packages/sre/web_ui
+        run: npm run lint
+
+  lint-cloud-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: packages/cloud/frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: packages/cloud/frontend
+        run: npx tsc -b
+
+      - name: Lint
+        working-directory: packages/cloud/frontend
+        run: npm run lint
