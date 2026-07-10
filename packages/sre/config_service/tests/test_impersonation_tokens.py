@@ -8,7 +8,8 @@ from sqlalchemy.pool import StaticPool
 from src.api.main import create_app
 from src.core.security import hash_token
 from src.db.base import Base
-from src.db.models import NodeConfig, NodeType, OrgNode, TeamToken
+from src.db.models import NodeType, OrgNode, TeamToken
+from src.db.config_models import NodeConfiguration
 
 
 @pytest.fixture()
@@ -48,17 +49,21 @@ def app_admin_and_team(monkeypatch):
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-root",
                 org_id="org1",
                 node_id="root",
+                node_type="org",
                 config_json={"knowledge_source": {"grafana": ["org"]}},
                 version=1,
             )
         )
         s.add(
-            NodeConfig(
+            NodeConfiguration(
+                id="cfg-teamA",
                 org_id="org1",
                 node_id="teamA",
+                node_type="team",
                 config_json={"knowledge_source": {"confluence": ["team"]}},
                 version=1,
             )
@@ -74,7 +79,7 @@ def app_admin_and_team(monkeypatch):
         s.commit()
 
     from src.api.routes import admin as admin_routes
-    from src.api.routes import auth_me, config_me
+    from src.api.routes import auth_me, config_v2
 
     def override_get_db():
         with SessionLocal() as s:
@@ -87,7 +92,7 @@ def app_admin_and_team(monkeypatch):
 
     app = create_app()
     app.dependency_overrides[admin_routes.get_db] = override_get_db
-    app.dependency_overrides[config_me.get_db] = override_get_db
+    app.dependency_overrides[config_v2.get_db] = override_get_db
     app.dependency_overrides[auth_me.get_db] = override_get_db
     return app
 
