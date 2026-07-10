@@ -112,8 +112,8 @@ def test_me_effective(app_and_db):
     assert resp.status_code == 200
     body = resp.json()
     # team overrides wins for confluence; grafana inherited from org remains
-    assert body["knowledge_source"]["grafana"] == ["org"]
-    assert body["knowledge_source"]["confluence"] == ["team"]
+    assert body["effective_config"]["knowledge_source"]["grafana"] == ["org"]
+    assert body["effective_config"]["knowledge_source"]["confluence"] == ["team"]
 
 
 def test_me_raw(app_and_db):
@@ -124,7 +124,7 @@ def test_me_raw(app_and_db):
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert [n["node_id"] for n in body["lineage"]] == ["root", "teamA"]
+    assert body["lineage"] == ["root", "teamA"]
     assert body["configs"]["root"]["knowledge_source"]["grafana"] == ["org"]
 
 
@@ -186,8 +186,8 @@ def test_put_me_merges_overrides(app_and_db):
     eff = client.get(
         "/api/v1/config/me/effective", headers={"Authorization": f"Bearer {token}"}
     ).json()
-    assert eff["knowledge_source"]["confluence"] == ["team"]
-    assert eff["knowledge_source"]["google"] == ["drive:folder/demo"]
+    assert eff["effective_config"]["knowledge_source"]["confluence"] == ["team"]
+    assert eff["effective_config"]["knowledge_source"]["google"] == ["drive:folder/demo"]
 
 
 def test_me_effective_is_cached_and_invalidated_on_put(app_and_db, monkeypatch):
@@ -344,5 +344,5 @@ def test_me_effective_accepts_oidc(monkeypatch):
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["knowledge_source"]["grafana"] == ["org"]
-    assert body["knowledge_source"]["confluence"] == ["team"]
+    assert body["effective_config"]["knowledge_source"]["grafana"] == ["org"]
+    assert body["effective_config"]["knowledge_source"]["confluence"] == ["team"]
