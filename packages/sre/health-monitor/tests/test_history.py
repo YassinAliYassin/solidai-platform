@@ -88,7 +88,8 @@ class TestSaveHistory:
 
     def test_save_creates_file(self, temp_history_file):
         """Should create the history file."""
-        history = {"svc": [{"timestamp": "2024-01-01T00:00:00+00:00", "status": "healthy"}]}
+        now = datetime.datetime.now(datetime.timezone.utc)
+        history = {"svc": [{"timestamp": now.isoformat(), "status": "healthy"}]}
         monitor._save_history(history)
         assert os.path.exists(temp_history_file)
 
@@ -97,24 +98,32 @@ class TestSaveHistory:
         old_max = monitor.HISTORY_MAX_ENTRIES
         monitor.HISTORY_MAX_ENTRIES = 5
         try:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            # 20 entries spaced 1 minute apart, oldest first; most recent = now
             entries = [
-                {"timestamp": f"2024-01-01T00:{i:02d}:00+00:00", "status": "healthy"}
+                {
+                    "timestamp": (
+                        now - datetime.timedelta(minutes=(19 - i))
+                    ).isoformat(),
+                    "status": "healthy",
+                }
                 for i in range(20)
             ]
             monitor._save_history({"svc": entries})
 
             loaded = monitor._load_history()
             assert len(loaded["svc"]) == 5
-            # Should keep the most recent entries
-            assert loaded["svc"][-1]["timestamp"] == "2024-01-01T00:19:00+00:00"
+            # Should keep the 5 most recent entries (the last 5 of the input)
+            assert loaded["svc"][-1]["timestamp"] == entries[-1]["timestamp"]
         finally:
             monitor.HISTORY_MAX_ENTRIES = old_max
 
     def test_save_preserves_all_services(self, temp_history_file):
         """Should preserve all services in the history."""
+        now = datetime.datetime.now(datetime.timezone.utc)
         history = {
-            "svc-a": [{"timestamp": "2024-01-01T00:00:00+00:00", "status": "healthy"}],
-            "svc-b": [{"timestamp": "2024-01-01T00:00:00+00:00", "status": "down"}],
+            "svc-a": [{"timestamp": now.isoformat(), "status": "healthy"}],
+            "svc-b": [{"timestamp": now.isoformat(), "status": "down"}],
         }
         monitor._save_history(history)
         loaded = monitor._load_history()
@@ -127,10 +136,11 @@ class TestRecordHistory:
 
     def test_record_new_service(self, temp_history_file):
         """Should create a new entry for a new service."""
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = [
             {
                 "name": "New Service",
-                "timestamp": "2024-01-01T00:00:00+00:00",
+                "timestamp": now.isoformat(),
                 "status": "healthy",
                 "latency_ms": 50,
             }
@@ -143,10 +153,11 @@ class TestRecordHistory:
 
     def test_record_appends(self, temp_history_file):
         """Should append to existing entries."""
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = [
             {
                 "name": "Service",
-                "timestamp": f"2024-01-01T00:{i:02d}:00+00:00",
+                "timestamp": (now - datetime.timedelta(minutes=(2 - i))).isoformat(),
                 "status": "healthy",
             }
             for i in range(3)
@@ -157,10 +168,11 @@ class TestRecordHistory:
 
     def test_record_includes_error(self, temp_history_file):
         """Should include error field when present."""
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = [
             {
                 "name": "Failing Service",
-                "timestamp": "2024-01-01T00:00:00+00:00",
+                "timestamp": now.isoformat(),
                 "status": "down",
                 "error": "Connection refused",
             }
@@ -171,10 +183,11 @@ class TestRecordHistory:
 
     def test_record_omits_none_latency(self, temp_history_file):
         """Should not include latency_ms when it's None."""
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = [
             {
                 "name": "Service",
-                "timestamp": "2024-01-01T00:00:00+00:00",
+                "timestamp": now.isoformat(),
                 "status": "down",
             }
         ]
