@@ -4,7 +4,7 @@ const path = require('path');
 
 class VoiceManager {
   constructor() {
-    this.apiKey = 'sk_4e666f0389ea428e0a123471fb4f61215aae7e3be1b74ec3'; // TEMP: hardcoded for testing
+    this.apiKey = process.env.ELEVENLABS_API_KEY || '';
     this.voiceMap = {
       agriculture: 'pNInz6obpgDQGcFmaJgB', // Adam
       fintech: 'EXAVDx5p6cHra5fGhgBx', // Bella
@@ -23,8 +23,11 @@ class VoiceManager {
   async generateSpeech(text, sector = 'agriculture') {
     try {
       const voiceId = this.voiceMap[sector] || this.voiceMap.agriculture;
-      console.log('ElevenLabs: Using API key starting with:', this.apiKey.substring(0, 10) + '...');
-      
+      if (!this.apiKey) {
+        console.warn('ElevenLabs: ELEVENLABS_API_KEY not set — TTS disabled');
+        return null;
+      }
+
       const response = await axios({
         method: 'post',
         url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -46,9 +49,9 @@ class VoiceManager {
 
       const filename = `response_${Date.now()}.mp3`;
       const filepath = path.join(this.audioDir, filename);
-      
+
       fs.writeFileSync(filepath, Buffer.from(response.data));
-      
+
       return filepath;
     } catch (error) {
       console.error('ElevenLabs TTS error:', error.message);
