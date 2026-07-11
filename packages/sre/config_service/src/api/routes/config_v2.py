@@ -194,6 +194,8 @@ class ConfigResponse(BaseModel):
     version: int
     updated_at: Optional[datetime]
     updated_by: Optional[str]
+    pending_change_ids: Optional[List[str]] = None
+    message: Optional[str] = None
 
 
 class EffectiveConfigResponse(BaseModel):
@@ -403,14 +405,47 @@ async def update_config(
         )
 
     # Check if approval is required
-    get_fields_requiring_approval(
+    approval_required = get_fields_requiring_approval(
         body.config,
         config.config_json,
         field_defs,
     )
 
-    # TODO: If approval required, create pending change instead
-    # For now, allow direct changes
+    if approval_required:
+        # Route guarded changes through the pending-change approval flow
+        # instead of applying them directly.
+        from ...db.repository import create_pending_change
+
+        pending_ids = []
+        for field in approval_required:
+            change = create_pending_change(
+                db,
+                org_id=org_id,
+                node_id=node_id,
+                change_type="config",
+                change_path=field["path"],
+                proposed_value={field["path"]: field["new_value"]},
+                previous_value={field["path"]: field["old_value"]},
+                requested_by=(
+                    admin.subject if hasattr(admin, "subject") else "admin"
+                ),
+                reason=body.reason,
+            )
+            pending_ids.append(change.id)
+        db.commit()
+        return ConfigResponse(
+            node_id=node_id,
+            node_type=config.node_type,
+            config=config.config_json,
+            version=config.version,
+            updated_at=config.updated_at,
+            updated_by=config.updated_by,
+            pending_change_ids=pending_ids,
+            message=(
+                f"{len(pending_ids)} field(s) require approval and were "
+                "submitted as pending changes."
+            ),
+        )
 
     try:
         updated_config, diff = repo.update_node_configuration(
