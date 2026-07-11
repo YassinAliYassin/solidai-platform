@@ -334,27 +334,19 @@ def _load_history() -> dict:
 
 
 def _save_history(history: dict):
-    """Save health history to disk, trimming old entries."""
+    """Save health history to disk, trimming old entries.
+
+    Only the count-based rolling window (HISTORY_MAX_ENTRIES) is applied here.
+    Age-based retention (older than N hours) is intentionally NOT applied at
+    write time — that filtering happens at read time in the stats/incident
+    query helpers (get_uptime_stats, get_latency_stats, get_error_rate,
+    get_incidents), so we never silently destroy persisted history.
+    """
     try:
-        # Trim entries per service to max allowed count
+        # Trim entries per service to max allowed count (rolling window)
         for name in history:
             if len(history[name]) > HISTORY_MAX_ENTRIES:
                 history[name] = history[name][-HISTORY_MAX_ENTRIES:]
-
-        # Age-based cleanup: remove entries older than HISTORY_MAX_AGE_HOURS
-        # Default: 48 hours (2 days) — prevents unbounded file growth
-        max_age_hours = int(os.getenv("HISTORY_MAX_AGE_HOURS", "48"))
-        cutoff = (
-            datetime.datetime.now(datetime.timezone.utc)
-            - datetime.timedelta(hours=max_age_hours)
-        ).isoformat()
-        for name in history:
-            history[name] = [
-                e for e in history[name]
-                if e.get("timestamp", "") >= cutoff
-            ]
-        # Remove services with no remaining entries
-        history = {k: v for k, v in history.items() if v}
 
         with open(HISTORY_FILE, "w") as f:
             json.dump(history, f, indent=2)
