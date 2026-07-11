@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import torch
 import subprocess
 import json
+from pathlib import Path
 from typing import List, Optional
 
 app = FastAPI(
@@ -19,10 +20,16 @@ app = FastAPI(
 # Load trained model
 try:
     from training.train_simple import SimpleSolidLLM
+    _repo_root = Path(__file__).resolve().parent.parent
     model = SimpleSolidLLM(vocab_size=1000, d_model=128, n_layers=2, n_heads=2)
-    model.load_state_dict(torch.load('/home/yassin/solid-llm/models/solid-llm-v2-simple.pth'))
-    model.eval()
-    print("Solid LLM v2.0 loaded SUCCESSFULLY!")
+    _ckpt = _repo_root / "models" / "solid-llm-v2-simple.pth"
+    try:
+        model.load_state_dict(torch.load(_ckpt))
+        model.eval()
+        print("Solid LLM v2.0 loaded SUCCESSFULLY!")
+    except FileNotFoundError:
+        print(f"Model checkpoint not found at {_ckpt}; serving with untrained weights.")
+        model = None
 except Exception as e:
     print(f"Model load error: {e}")
     model = None
@@ -72,8 +79,10 @@ async def generate(request: GenerateRequest):
         hermes_reasoning = ""
         if request.use_hermes:
             try:
+                import shutil
+                hermes_bin = shutil.which("hermes") or "/home/yassin/.hermes/hermes-agent/venv/bin/hermes"
                 result = subprocess.run(
-                    ["/home/yassin/.hermes/hermes-agent/venv/bin/hermes", "chat", "-q", 
+                    [hermes_bin, "chat", "-q",
                      f"Provide intelligent reasoning for: {request.prompt}"],
                     capture_output=True,
                     text=True,

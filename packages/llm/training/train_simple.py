@@ -8,6 +8,9 @@ import torch.nn as nn
 import torch.optim as optim
 from typing import List
 import math
+from pathlib import Path as _Path
+
+_REPO_ROOT = _Path(__file__).resolve().parent.parent
 
 class SimpleSolidLLM(nn.Module):
     """
@@ -106,8 +109,8 @@ def train_solid_llm():
         print(f"Epoch {epoch+1}/5 - Loss: {avg_loss:.4f}")
     
     # Save
-    torch.save(model.state_dict(), '/home/yassin/solid-llm/models/solid-llm-v2-simple.pth')
-    print(f"\nModel saved to: /home/yassin/solid-llm/models/solid-llm-v2-simple.pth")
+    torch.save(model.state_dict(), str(_REPO_ROOT / "models" / "solid-llm-v2-simple.pth"))
+    print(f"\nModel saved to: {_REPO_ROOT / 'models' / 'solid-llm-v2-simple.pth'}")
     
     # Test generation
     print("\nTesting generation...")

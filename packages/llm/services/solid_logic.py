@@ -12,7 +12,10 @@ from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import sys
-sys.path.append('/home/yassin/solid-llm/inference')
+from pathlib import Path as _Path
+_HERE = _Path(__file__).resolve().parent
+_REPO_ROOT = _HERE.parent
+sys.path.insert(0, str(_REPO_ROOT / "inference"))
 from local_hermes import LocalHermesEngine
 
 app = FastAPI(title="Solid Logic - Autonomous Agency Layer")

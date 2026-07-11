@@ -1922,7 +1922,7 @@ async def preview_mcp_server(
 
     # Check for warnings
     mcp_config = {"command": body.command, "args": body.args, "env": body.env_vars}
-    warnings = _check_for_warnings(mcp_config, [t.dict() for t in tools])
+    warnings = _check_for_warnings(mcp_config, [t.model_dump() for t in tools])
 
     return MCPPreviewResponse(
         success=True,
