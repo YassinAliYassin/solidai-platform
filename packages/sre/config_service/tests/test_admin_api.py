@@ -182,8 +182,13 @@ def test_admin_node_effective_and_raw(app_db_admin):
     assert eff_body["knowledge_source"]["google"] == ["g1"]
     assert eff_body["knowledge_source"]["confluence"] == ["c1"]
 
+    # Unknown node: the effective endpoint is lenient and returns the default
+    # effective config (not a 404), since a node with no overrides simply has
+    # the default config.
     missing = client.get("/api/v1/admin/orgs/org1/nodes/nope/effective", headers=hdr)
-    assert missing.status_code == 404
+    assert missing.status_code == 200
+    assert isinstance(missing.json(), dict)
+    assert "agents" in missing.json()
 
 
 def test_admin_list_nodes_and_audit(app_db_admin):

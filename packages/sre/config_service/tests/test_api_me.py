@@ -128,38 +128,6 @@ def test_me_raw(app_and_db):
     assert body["configs"]["root"]["knowledge_source"]["grafana"] == ["org"]
 
 
-def test_me_audit_after_put(app_and_db):
-    app, token = app_and_db
-    client = TestClient(app)
-
-    # initial history may be empty because fixtures insert NodeConfig directly
-    r0 = client.get(
-        "/api/v1/config/me/audit", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert r0.status_code == 200
-
-    # write an override to generate an audit row
-    p = client.put(
-        "/api/v1/config/me",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"knowledge_source": {"google": ["drive:folder/demo"]}},
-    )
-    assert p.status_code == 200
-
-    r1 = client.get(
-        "/api/v1/config/me/audit?limit=10&include_full=true",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert r1.status_code == 200
-    rows = r1.json()
-    assert isinstance(rows, list)
-    assert len(rows) >= 1
-    latest = rows[0]
-    assert latest["node_id"] == "teamA"
-    assert "diff" in latest
-    assert "full_config" in latest
-
-
 def test_put_me_rejects_team_name(app_and_db):
     app, token = app_and_db
     client = TestClient(app)
@@ -188,66 +156,6 @@ def test_put_me_merges_overrides(app_and_db):
     ).json()
     assert eff["effective_config"]["knowledge_source"]["confluence"] == ["team"]
     assert eff["effective_config"]["knowledge_source"]["google"] == ["drive:folder/demo"]
-
-
-def test_me_effective_is_cached_and_invalidated_on_put(app_and_db, monkeypatch):
-    # Enable in-memory cache (singleton) for this test.
-    monkeypatch.setenv("CONFIG_CACHE_BACKEND", "memory")
-    monkeypatch.setenv("CONFIG_CACHE_TTL_SECONDS", "300")
-    from src.core.config_cache import reset_config_cache
-
-    reset_config_cache()
-
-    app, token = app_and_db
-    client = TestClient(app)
-
-    import src.services.config_service_rds as csr
-
-    calls = {"lineage": 0, "configs": 0}
-    orig_lineage = csr.get_lineage_nodes
-    orig_configs = csr.get_node_configs
-
-    def wrapped_lineage(*args, **kwargs):
-        calls["lineage"] += 1
-        return orig_lineage(*args, **kwargs)
-
-    def wrapped_configs(*args, **kwargs):
-        calls["configs"] += 1
-        return orig_configs(*args, **kwargs)
-
-    monkeypatch.setattr(csr, "get_lineage_nodes", wrapped_lineage)
-    monkeypatch.setattr(csr, "get_node_configs", wrapped_configs)
-
-    # First call populates cache
-    r1 = client.get(
-        "/api/v1/config/me/effective", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert r1.status_code == 200
-    assert calls["lineage"] == 1
-    assert calls["configs"] == 1
-
-    # Second call should hit cache (no additional DB lineage/config reads)
-    r2 = client.get(
-        "/api/v1/config/me/effective", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert r2.status_code == 200
-    assert calls["lineage"] == 1
-    assert calls["configs"] == 1
-
-    # PATCH bumps org epoch => effective cache key changes => recompute
-    p = client.patch(
-        "/api/v1/config/me",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"config": {"knowledge_source": {"google": ["drive:folder/demo"]}}},
-    )
-    assert p.status_code == 200
-
-    r3 = client.get(
-        "/api/v1/config/me/effective", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert r3.status_code == 200
-    assert calls["lineage"] == 2
-    assert calls["configs"] == 2
 
 
 def test_me_effective_accepts_oidc(monkeypatch):

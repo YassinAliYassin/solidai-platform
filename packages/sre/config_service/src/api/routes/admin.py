@@ -20,11 +20,12 @@ from src.db.config_repository import (
     get_effective_config,
     get_node_configuration,
     get_node_configurations,
+    get_or_create_node_configuration,
     invalidate_config_cache,
     rollback_to_version,
     update_node_configuration,
 )
-from src.db.models import KnowledgeDocument, KnowledgeEdge, NodeType, Template
+from src.db.models import KnowledgeDocument, KnowledgeEdge, NodeType, OrgNode, Template
 from src.db.repository import (
     create_org_node,
     create_pending_change,
@@ -761,6 +762,21 @@ def admin_patch_node_config(
                     }
 
         # Apply the change directly
+        # Ensure the node configuration exists (auto-create like the PATCH
+        # /orgs/{org_id}/nodes/{node_id} endpoint, so the org root node —
+        # node_id == org_id — is always configurable).
+        node_config = get_node_configuration(session, org_id=org_id, node_id=node_id)
+        if node_config is None:
+            node = (
+                session.query(OrgNode)
+                .filter(OrgNode.org_id == org_id, OrgNode.node_id == node_id)
+                .first()
+            )
+            if node is None:
+                raise HTTPException(status_code=404, detail=f"Node not found: {node_id}")
+            node_config = get_or_create_node_configuration(
+                session, org_id, node_id, node.node_type
+            )
         updated_config, diff = update_node_configuration(
             session,
             org_id=org_id,
