@@ -41,12 +41,6 @@ export function SignInGate({ children }: { children: React.ReactNode }) {
   const [ssoConfig, setSsoConfig] = useState<OrgSSOConfig | null>(null);
   const [loadingSSO, setLoadingSSO] = useState(true);
 
-  // Bypass auth for public paths
-  const isPublicPath = PUBLIC_PATHS.some(p => pathname?.startsWith(p));
-  if (isPublicPath) {
-    return <>{children}</>;
-  }
-
   // Visitor login state
   const [loginMode, setLoginMode] = useState<LoginMode>('team');
   const [visitorEmail, setVisitorEmail] = useState('');
@@ -82,6 +76,46 @@ export function SignInGate({ children }: { children: React.ReactNode }) {
     if (error) return error;
     return null;
   }, [error, submitError]);
+
+  // Poll for queue status when visitor is queued
+  useEffect(() => {
+    if (!visitorSession || visitorSession.status !== 'queued') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/visitor/heartbeat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+        });
+        const data = await res.json();
+
+        if (data.status === 'active') {
+          // Promoted to active - refresh identity
+          setVisitorSession(null);
+          await refresh();
+        } else if (data.status === 'queued') {
+          // Update queue position
+          setVisitorSession((prev) =>
+            prev ? { ...prev, queue_position: data.queue_position, estimated_wait_seconds: data.estimated_wait_seconds } : null
+          );
+        } else if (data.status === 'expired') {
+          // Session expired
+          setVisitorSession(null);
+          setSubmitError('Your queue position expired. Please try again.');
+        }
+      } catch (e) {
+        console.error('Failed to poll queue status:', e);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [visitorSession, refresh]);
+
+  // Bypass auth for public paths
+  const isPublicPath = PUBLIC_PATHS.some(p => pathname?.startsWith(p));
+  if (isPublicPath) {
+    return <>{children}</>;
+  }
 
   const login = async () => {
     setSubmitting(true);
@@ -152,40 +186,6 @@ export function SignInGate({ children }: { children: React.ReactNode }) {
       setSubmitting(false);
     }
   };
-
-  // Poll for queue status when visitor is queued
-  useEffect(() => {
-    if (!visitorSession || visitorSession.status !== 'queued') return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/visitor/heartbeat', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-        });
-        const data = await res.json();
-
-        if (data.status === 'active') {
-          // Promoted to active - refresh identity
-          setVisitorSession(null);
-          await refresh();
-        } else if (data.status === 'queued') {
-          // Update queue position
-          setVisitorSession((prev) =>
-            prev ? { ...prev, queue_position: data.queue_position, estimated_wait_seconds: data.estimated_wait_seconds } : null
-          );
-        } else if (data.status === 'expired') {
-          // Session expired
-          setVisitorSession(null);
-          setSubmitError('Your queue position expired. Please try again.');
-        }
-      } catch (e) {
-        console.error('Failed to poll queue status:', e);
-      }
-    }, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [visitorSession, refresh]);
 
   const handleSSOLogin = () => {
     if (!ssoConfig) return;
