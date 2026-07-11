@@ -72,7 +72,8 @@ jobs:
           . .venv/bin/activate
           pip install pytest pyjwt cryptography python-multipart \
             croniter httpx ruamel.yaml prometheus_client sqlalchemy \
-            structlog watchdog fastapi pydantic pydantic-settings email-validator
+            structlog watchdog fastapi pydantic pydantic-settings email-validator \
+            alembic psycopg2-binary
 
       - name: Run config_service tests
         working-directory: packages/sre/config_service
