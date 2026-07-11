@@ -81,7 +81,25 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(title="Solid LLM - Local Hermes API")
-engine = LocalHermesEngine()
+
+# Lazily instantiate the engine so importing this module (e.g. for tests or
+# app wiring) does NOT trigger an 8B model download. The model only loads on
+# first use or on app startup.
+_engine = None
+
+
+def get_engine() -> "LocalHermesEngine":
+    global _engine
+    if _engine is None:
+        _engine = LocalHermesEngine()
+    return _engine
+
+
+@app.on_event("startup")
+def _load_engine_on_startup():
+    # Warm the model when the server actually boots.
+    get_engine()
+
 
 class QueryRequest(BaseModel):
     prompt: str
@@ -95,11 +113,16 @@ class QueryResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "model": "Hermes 3 8B Local", "engine": "Solid LLM Local Pipeline"}
+    return {
+        "status": "healthy",
+        "model": "Hermes 3 8B Local",
+        "engine_loaded": _engine is not None,
+    }
 
 @app.post("/api/hermes/query", response_model=QueryResponse)
 async def query_hermes(request: QueryRequest):
     try:
+        engine = get_engine()
         response = engine.generate(request.prompt, request.system_prompt)
         return QueryResponse(response=response)
     except Exception as e:

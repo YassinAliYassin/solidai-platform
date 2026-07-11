@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List
 from inference.solid_llm import SolidLLM
 import uvicorn
 
@@ -53,7 +54,7 @@ async def generate(request: GenerateRequest):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    messages = [msg.dict() for msg in request.messages]
+    messages = [msg.model_dump() for msg in request.messages]
     result = llm.chat(messages)
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error"))

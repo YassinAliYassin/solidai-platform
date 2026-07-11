@@ -1,0 +1,54 @@
+name: LLM package tests
+
+# Guard the consolidated packages/llm (Solid LLM) Python package.
+# Runs the stdlib unittest suite (regression + model + local_hermes).
+# Two tiers:
+#   - light: no torch; guards import-time crashes + leftover hardcoded paths.
+#   - full:  CPU torch + transformers; exercises the model + lazy-load engine.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/llm/**'
+      - '.github/workflows/llm-tests.yml'
+  pull_request:
+    paths:
+      - 'packages/llm/**'
+      - '.github/workflows/llm-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test-light:
+    name: Light (no torch)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/llm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+      - name: Run light regression suite
+        run: make test-light
+
+  test-full:
+    name: Full (CPU torch)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/llm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CPU-only torch (keeps CI lean)
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install dependencies (torch already satisfied by CPU build)
+        run: pip install -r requirements.txt
+      - name: Run full test suite
+        run: make test
