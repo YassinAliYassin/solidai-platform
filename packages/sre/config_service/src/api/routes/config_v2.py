@@ -942,19 +942,16 @@ async def get_my_org_settings(
 async def update_my_org_settings(
     body: dict,
     db: Session = Depends(get_db),
-    authorization: str = Header(default=""),
-    x_org_id: Optional[str] = Header(default=None),
-    x_team_node_id: Optional[str] = Header(default=None),
+    admin: AdminPrincipal = Depends(require_admin),
 ):
     """
     Update organization settings for the current team's organization.
 
-    Supports both team and admin tokens (admin uses org root node).
-    Only org admins should be able to call this (TODO: add permission check).
+    Restricted to org admins (org_admin_token / OIDC admin / super-admin token).
+    Team tokens are no longer accepted, closing a privilege-escalation gap
+    where any team member could mutate org-wide settings.
     """
-    org_id, team_node_id = _resolve_identity_with_admin_fallback(
-        authorization, x_org_id, x_team_node_id, db
-    )
+    org_id = admin.org_id if admin.org_id else admin.subject
 
     settings = db.query(OrgSettings).filter(OrgSettings.org_id == org_id).first()
 
