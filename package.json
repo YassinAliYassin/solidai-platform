@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "lint:packages": "cd packages/sre/web_ui && npx tsc --noEmit && cd ../../packages/cloud/frontend && npx tsc --noEmit",
+    "lint:packages": "cd packages/sre/web_ui && npx tsc --noEmit && cd ../../cloud/frontend && npx tsc --noEmit",
     "lint:all": "npm run lint && npm run lint:packages"
   },
   "dependencies": {
