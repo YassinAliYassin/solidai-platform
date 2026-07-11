@@ -11,7 +11,7 @@ Unified monorepo for the SolidAI platform — AI-powered enterprise solutions fo
 | `packages/llm/` | Private LLM training & inference | `solid-llm` |
 | `packages/cloud/` | Solid Cloud AI backend, frontend & MCP server | `solid-cloud-ai` |
 | `packages/gateway/` | Multi-agent gateway (Telegram, WhatsApp, web) | local only |
-| `infra/backup/` | Backup scripts and config templates | `solid-cloud-backup` |
+| `infra/backup/` | Backup scripts and Hermes sync helpers | n/a (added in monorepo) |
 
 ## Quick Start
 
