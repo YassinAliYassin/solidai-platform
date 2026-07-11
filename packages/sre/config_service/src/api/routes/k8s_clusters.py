@@ -24,6 +24,7 @@ from ..auth import (
     authenticate_admin_request,
     require_team_auth,
 )
+from .internal import require_internal_service
 
 logger = structlog.get_logger(__name__)
 
@@ -381,7 +382,7 @@ async def update_cluster_status_internal(
     cluster_id: str,
     body: K8sClusterStatusUpdate,
     db: Session = Depends(get_db),
-    # TODO: Add internal service authentication
+    _service: str = Depends(require_internal_service),
 ):
     """
     Update cluster connection status.
@@ -428,7 +429,7 @@ async def update_cluster_status_internal(
 async def get_cluster_by_token_internal(
     token_id: str,
     db: Session = Depends(get_db),
-    # TODO: Add internal service authentication
+    _service: str = Depends(require_internal_service),
 ):
     """
     Get cluster by token ID.
