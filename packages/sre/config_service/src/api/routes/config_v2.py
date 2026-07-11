@@ -1139,6 +1139,14 @@ async def update_my_config(
             },
         )
 
+    # team_name is an immutable, server-assigned field; reject attempts to set it
+    # (the UI also blocks this client-side — see index.html / app.js).
+    if "team_name" in body.config:
+        raise HTTPException(
+            status_code=400,
+            detail="team_name is immutable and cannot be modified",
+        )
+
     # Validate agent enable/disable operations
     if "agents" in body.config:
         from ...db.config_repository import compute_effective_config
