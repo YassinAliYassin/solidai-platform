@@ -223,7 +223,7 @@ export default function TeamToolsPage() {
 
         // Backend now provides config_values and config_sources directly
         // Fallback to extracting from flat structure for backwards compatibility
-        let extractedValues: Record<string, string> = config.config_values || {};
+        const extractedValues: Record<string, string> = config.config_values || {};
         if (Object.keys(extractedValues).length === 0) {
           // Fallback: extract from flat structure
           for (const fieldName of Object.keys(mergedSchema)) {

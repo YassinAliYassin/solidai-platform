@@ -34,8 +34,18 @@ CONFIG_PATH = os.path.join(
 
 
 def load_litellm_config() -> dict:
-    """Load and parse litellm_config.yaml."""
-    assert os.path.exists(CONFIG_PATH), f"litellm_config.yaml not found at {CONFIG_PATH}"
+    """Load and parse litellm_config.yaml.
+
+    litellm_config.yaml is gitignored and generated locally by
+    `make dev` / scripts/generate-litellm-config.sh (from .env). In CI and
+    other checkouts without a generated config, these drift-guard tests are
+    skipped rather than failing on a missing file.
+    """
+    if not os.path.exists(CONFIG_PATH):
+        pytest.skip(
+            f"litellm_config.yaml not found at {CONFIG_PATH} "
+            "(generated locally via `make dev`; skipped in CI)"
+        )
     with open(CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
