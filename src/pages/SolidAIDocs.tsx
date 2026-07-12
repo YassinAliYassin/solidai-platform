@@ -82,9 +82,9 @@ export default function SolidAIDocs() {
               <p className="text-gray-400 mb-4">Sign up at SolidAI and get your API key from the dashboard.</p>
               <CodeBlock
                 id="api-key"
-                code={`curl -X POST https://api.solidai.africa/v1/auth/signup \\
+                code={`curl -X POST https://api.solidsolutions.africa/v1/auth/signup \\
   -H "Content-Type: application/json" \\
-  -d '{"email": "your@email.com", "password": "secure_pass"}'`}
+  -d '{"email": "your@email.com", "name": "Your Name"}'`}
               />
             </div>
 
@@ -96,11 +96,11 @@ export default function SolidAIDocs() {
               <p className="text-gray-400 mb-4">Test the API with a simple completion request.</p>
               <CodeBlock
                 id="first-call"
-                code={`curl https://api.solidai.africa/v1/chat/completions \\
+                code={`curl https://api.solidsolutions.africa/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "solidai-7b",
+    "model": "meta-llama/llama-3.1-8b-instruct",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'`}
               />
