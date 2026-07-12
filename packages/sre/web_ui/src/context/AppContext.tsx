@@ -328,7 +328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const injectToolsForIntegration = (integrationId: string, teamId: string) => {
       // Mock injection of tools
-      let newTools: ToolPrompt[] = [];
+      const newTools: ToolPrompt[] = [];
       
       if (integrationId === 'jira') {
           newTools.push({

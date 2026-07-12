@@ -48,7 +48,7 @@ export const BrandIcon = ({ slug, size = 24, className, color }: BrandIconProps)
     }
 
     // 2. Dynamic lookup from simple-icons
-    let iconKey = Object.keys(SimpleIcons).find(key => {
+    const iconKey = Object.keys(SimpleIcons).find(key => {
         if (key === 'default' || key === '__esModule') return false;
         const i = (SimpleIcons as any)[key];
         return i && (normalize(i.slug) === target || normalize(i.title) === target);

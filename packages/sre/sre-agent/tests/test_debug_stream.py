@@ -6,15 +6,6 @@ import os
 import sys
 import asyncio
 
-# Must set env vars before importing server
-os.environ['CONFIG_SERVICE_URL'] = 'http://localhost:8081'
-os.environ['LITELLM_BASE_URL'] = 'http://localhost:4001'
-os.environ['NEO4J_URI'] = ''
-os.environ['ANTHROPIC_API_KEY'] = ''
-os.environ['SOLIDAI_SRE_TENANT_ID'] = 'test-tenant'
-os.environ['SOLIDAI_SRE_TEAM_ID'] = 'test-team'
-os.environ['OPENROUTER_API_KEY'] = 'test-key'
-
 SRE_AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SRE_AGENT_ROOT)
 
@@ -56,6 +47,17 @@ def _mock_load_team_config():
 
 
 def main():
+    # Set env vars before importing server (server reads them at import time).
+    # Scoped to this function so they don't leak into the shared pytest
+    # process and pollute other test modules' environment.
+    os.environ['CONFIG_SERVICE_URL'] = 'http://localhost:8081'
+    os.environ['LITELLM_BASE_URL'] = 'http://localhost:4001'
+    os.environ['NEO4J_URI'] = ''
+    os.environ['ANTHROPIC_API_KEY'] = ''
+    os.environ['SOLIDAI_SRE_TENANT_ID'] = 'test-tenant'
+    os.environ['SOLIDAI_SRE_TEAM_ID'] = 'test-team'
+    os.environ['OPENROUTER_API_KEY'] = 'test-key'
+
     import importlib
     import server as server_mod
 
