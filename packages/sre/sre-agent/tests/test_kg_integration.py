@@ -21,7 +21,33 @@ import urllib.request
 import urllib.error
 import concurrent.futures
 
+import pytest
+
 AGENT_URL = "http://localhost:8001"
+
+
+def _kg_server_reachable() -> bool:
+    """Return True if a live sre-agent server is listening on AGENT_URL.
+
+    These are live HTTP integration tests: they require the sre-agent
+    service (port 8001) and backing Neo4j to be running (see module docstring).
+    In CI / local runs without that stack up, skip rather than fail — mirrors
+    the pattern in test_litellm_fallback_chain.py for optional live deps.
+    """
+    try:
+        req = urllib.request.Request(f"{AGENT_URL}/health")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.status == 200
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+        return False
+
+
+# Skip the whole module when no live sre-agent server is reachable.
+pytestmark = pytest.mark.skipif(
+    not _kg_server_reachable(),
+    reason=f"No live sre-agent server at {AGENT_URL} (requires sre-agent+Neo4j); "
+    "skipping KG integration tests",
+)
 
 
 def _get(path: str) -> dict:

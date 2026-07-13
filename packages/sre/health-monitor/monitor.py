@@ -140,6 +140,13 @@ _last_alert_time: dict[str, float] = {}
 # service_name -> timestamp of last recovery notification
 _last_recovery_time: dict[str, float] = {}
 
+# Sentinel for "this key has never recorded a timestamp". Using -inf (instead of 0)
+# matters because last-alert times are stored as time.monotonic(), which starts at 0
+# at process boot. On a freshly started process, time.monotonic() < ALERT_COOLDOWN,
+# so a default of 0 would make `now - 0 < ALERT_COOLDOWN` true and silently suppress
+# all alerts/recovery notices for the first ALERT_COOLDOWN seconds of uptime.
+_NEVER_ALERTED = float("-inf")
+
 # ---------------------------------------------------------------------------
 # Webhook Subscriptions & SSE
 # ---------------------------------------------------------------------------
@@ -852,7 +859,7 @@ async def send_telegram(message: str) -> bool:
 def _should_alert(service_name: str, status: str) -> bool:
     """Determine if we should send an alert (respect cooldown)."""
     now = time.monotonic()
-    last_alert = _last_alert_time.get(service_name, 0)
+    last_alert = _last_alert_time.get(service_name, _NEVER_ALERTED)
     if now - last_alert < ALERT_COOLDOWN:
         return False
     return True
@@ -861,7 +868,7 @@ def _should_alert(service_name: str, status: str) -> bool:
 def _should_notify_recovery(service_name: str) -> bool:
     """Determine if we should send a recovery notification."""
     now = time.monotonic()
-    last_recovery = _last_recovery_time.get(service_name, 0)
+    last_recovery = _last_recovery_time.get(service_name, _NEVER_ALERTED)
     if now - last_recovery < ALERT_COOLDOWN:
         return False
     return True
@@ -1023,7 +1030,7 @@ async def _check_error_rates_and_latency(current_results: list[dict]):
 
         # --- Error rate check ---
         error_rate_key = f"{name}:error_rate"
-        last_error_alert = _last_alert_time.get(error_rate_key, 0)
+        last_error_alert = _last_alert_time.get(error_rate_key, _NEVER_ALERTED)
         if now - last_error_alert >= ALERT_COOLDOWN:
             error_rate = get_error_rate(history, name)
             if error_rate["error_rate"] is not None and error_rate["error_rate"] >= ERROR_RATE_THRESHOLD:
@@ -1041,7 +1048,7 @@ async def _check_error_rates_and_latency(current_results: list[dict]):
 
         # --- Latency degradation check ---
         latency_key = f"{name}:latency"
-        last_latency_alert = _last_alert_time.get(latency_key, 0)
+        last_latency_alert = _last_alert_time.get(latency_key, _NEVER_ALERTED)
         if now - last_latency_alert >= ALERT_COOLDOWN:
             degradation = check_latency_degradation(history, name)
             if degradation["degraded"]:
@@ -1058,7 +1065,7 @@ async def _check_error_rates_and_latency(current_results: list[dict]):
 
         # --- Latency trend prediction (proactive alerting) ---
         trend_key = f"{name}:trend"
-        last_trend_alert = _last_alert_time.get(trend_key, 0)
+        last_trend_alert = _last_alert_time.get(trend_key, _NEVER_ALERTED)
         if now - last_trend_alert >= ALERT_COOLDOWN:
             trend = predict_latency_trend(history, name)
             if (
