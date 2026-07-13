@@ -850,18 +850,28 @@ async def send_telegram(message: str) -> bool:
 
 
 def _should_alert(service_name: str, status: str) -> bool:
-    """Determine if we should send an alert (respect cooldown)."""
+    """Determine if we should send an alert (respect cooldown).
+
+    Uses a -inf sentinel for "never alerted before" so the very first
+    outage after the monitor starts is always reported, regardless of how
+    small time.monotonic() is on a freshly booted host (otherwise
+    `now - 0 < ALERT_COOLDOWN` would silently suppress the first alert for
+    up to ALERT_COOLDOWN seconds).
+    """
     now = time.monotonic()
-    last_alert = _last_alert_time.get(service_name, 0)
+    last_alert = _last_alert_time.get(service_name, float("-inf"))
     if now - last_alert < ALERT_COOLDOWN:
         return False
     return True
 
 
 def _should_notify_recovery(service_name: str) -> bool:
-    """Determine if we should send a recovery notification."""
+    """Determine if we should send a recovery notification.
+
+    Uses a -inf sentinel for "never notified before" (see _should_alert).
+    """
     now = time.monotonic()
-    last_recovery = _last_recovery_time.get(service_name, 0)
+    last_recovery = _last_recovery_time.get(service_name, float("-inf"))
     if now - last_recovery < ALERT_COOLDOWN:
         return False
     return True

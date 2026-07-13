@@ -15,13 +15,38 @@ Requires: sre-agent running in Docker (port 8001), Neo4j running (port 7687)
 """
 
 import json
+import os
 import sys
 import time
 import urllib.request
 import urllib.error
 import concurrent.futures
 
-AGENT_URL = "http://localhost:8001"
+import pytest
+
+AGENT_URL = os.getenv("KG_AGENT_URL", "http://localhost:8001")
+
+
+def _server_reachable() -> bool:
+    """Return True if a live sre-agent server is reachable on AGENT_URL.
+
+    These are integration tests that require the sre-agent server (and its
+    Neo4j backend) to be running. In CI there is no such server, so we skip
+    rather than fail with a connection error. Run locally with the agent up
+    to exercise them.
+    """
+    try:
+        with urllib.request.urlopen(f"{AGENT_URL}/health", timeout=3) as resp:
+            return resp.status == 200
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+# Skip the entire module when no live server is available.
+pytestmark = pytest.mark.skipif(
+    not _server_reachable(),
+    reason="sre-agent server not reachable at AGENT_URL (integration tests need a running agent)",
+)
 
 
 def _get(path: str) -> dict:
