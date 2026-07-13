@@ -852,7 +852,12 @@ async def send_telegram(message: str) -> bool:
 def _should_alert(service_name: str, status: str) -> bool:
     """Determine if we should send an alert (respect cooldown)."""
     now = time.monotonic()
-    last_alert = _last_alert_time.get(service_name, 0)
+    # Sentinel is the distant past, not 0: time.monotonic() counts seconds
+    # since boot, so a default of 0 means "at boot time" and would wrongly
+    # suppress the first alert on a freshly-booted host/container (uptime <
+    # ALERT_COOLDOWN). Using -inf guarantees a never-before-alerted service
+    # is always eligible.
+    last_alert = _last_alert_time.get(service_name, float("-inf"))
     if now - last_alert < ALERT_COOLDOWN:
         return False
     return True
@@ -861,7 +866,7 @@ def _should_alert(service_name: str, status: str) -> bool:
 def _should_notify_recovery(service_name: str) -> bool:
     """Determine if we should send a recovery notification."""
     now = time.monotonic()
-    last_recovery = _last_recovery_time.get(service_name, 0)
+    last_recovery = _last_recovery_time.get(service_name, float("-inf"))
     if now - last_recovery < ALERT_COOLDOWN:
         return False
     return True
