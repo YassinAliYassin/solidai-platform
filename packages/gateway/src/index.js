@@ -122,16 +122,22 @@ app.post('/query', async (req, res) => {
   }
 });
 
-// Pairing approval endpoint
+// Pairing approval endpoint (admin only)
 app.post('/pairing/approve', (req, res) => {
+  // Require the admin secret header — this endpoint was previously open to anyone
+  // who could reach the gateway port.
+  const adminSecret = req.get('X-Admin-Secret') || req.body.adminSecret;
+  if (!adminSecret || adminSecret !== process.env.PAIRING_ADMIN_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Missing code' });
-  
-  const success = pairing.approvePairing(code);
+
+  const success = pairing.approvePairing(code, process.env.OWNER_TELEGRAM_ID || '1292960246');
   if (success) {
     res.json({ status: 'approved' });
   } else {
-    res.status(400).json({ error: 'Invalid pairing code' });
+    res.status(400).json({ error: 'Invalid or expired pairing code' });
   }
 });
 
