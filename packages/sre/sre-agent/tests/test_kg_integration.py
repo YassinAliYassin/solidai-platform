@@ -15,13 +15,44 @@ Requires: sre-agent running in Docker (port 8001), Neo4j running (port 7687)
 """
 
 import json
+import os
 import sys
 import time
 import urllib.request
 import urllib.error
 import concurrent.futures
 
+import pytest
+
 AGENT_URL = "http://localhost:8001"
+
+# Probe loopback directly, bypassing any HTTP(S) proxy, so we measure the
+# real localhost reachability rather than a proxy's response.
+_no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def _kg_server_available() -> bool:
+    """Probe whether the live sre-agent server (port 8001) is reachable.
+
+    These integration tests require a running sre-agent + Neo4j stack
+    (``make dev`` / Docker Compose). In CI and other checkouts without the
+    stack, they are skipped rather than failing on a connection-refused
+    error. Mirrors the existing litellm_config.yaml skip pattern.
+    """
+    try:
+        req = urllib.request.Request(f"{AGENT_URL}/health")
+        with _no_proxy_opener.open(req, timeout=3) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+# Skip the whole module when running under CI (no live stack is started
+# there) or when the live KG server isn't reachable on loopback.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CI") is not None or not _kg_server_available(),
+    reason=f"No live sre-agent server at {AGENT_URL} (run `make dev`; skipped in CI)",
+)
 
 
 def _get(path: str) -> dict:
