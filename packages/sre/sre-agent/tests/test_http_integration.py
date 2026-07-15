@@ -14,12 +14,27 @@ Requires: sre-agent running in Docker (port 8001)
 """
 
 import json
+import os
 import sys
 import time
 import urllib.request
 import urllib.error
 
+import pytest
+
 AGENT_URL = "http://localhost:8001"
+
+# Probe loopback directly, bypassing any HTTP(S) proxy, so we measure the
+# real localhost reachability rather than a proxy's response.
+_no_proxy_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+# Skip the whole module under CI (no live sre-agent stack is started there)
+# or when the live server isn't reachable on loopback. These are end-to-end
+# tests against a running agent; in CI they must be skipped, not no-op.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CI") is not None,
+    reason=f"No live sre-agent server at {AGENT_URL} (run `make dev`; skipped in CI)",
+)
 
 
 def _parse_sse(raw: str) -> list[dict]:
