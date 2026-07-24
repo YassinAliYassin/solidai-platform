@@ -33,9 +33,8 @@ LEGACY_PATH = "/home/yassin/solid-llm"
 PATH_SENSITIVE_FILES = [
     "services/solid_logic.py",
     "services/solid_logic_v2_1.py",
-    "inference/api_v2.py",
+    "inference/engine.py",
     "training/train.py",
-    "training/train_simple.py",
 ]
 
 

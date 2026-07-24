@@ -1,33 +1,55 @@
 # Solid LLM
 
-**Solid LLM** is a custom Large Language Model project by [Solid Solutions](https://solidsolutions.africa). It features a transformer model built from scratch in PyTorch, multiple inference APIs, and an autonomous agency layer.
+**Solid LLM** is a custom language-model project by [Solid Solutions](https://solidsolutions.africa). At its core is a genuine decoder-only transformer **built from scratch in PyTorch** with causal self-attention, a real character-level tokenizer, and an honest train→generate pipeline. The current public artefact is a small **character-level research preview** (~3.2M parameters) trained on a first-party Solid Solutions corpus — it produces coherent, on-topic English and is served over a FastAPI inference API.
+
+> This is an honest research preview, not a large production model. It demonstrates the real training and inference pipeline end to end.
 
 ## Architecture
 
 ```
 solid-llm/
-├── inference/          # Inference engines
+├── data/               # Training data (first-party, no third-party text)
+│   ├── knowledge.md    # Factual Solid Solutions knowledge base
+│   ├── build_corpus.py # Generates data/corpus.txt from knowledge + templates
+│   └── corpus.txt      # Built corpus (generated)
+├── training/           # Model + training
+│   ├── tokenizer.py    # Reversible character-level tokenizer
+│   ├── model.py        # SolidLLM: decoder-only causal transformer (from scratch)
+│   ├── train.py        # Training pipeline -> models/*.pth,tokenizer.json,config.json
+│   └── solid_llm_model.py  # Larger reference architecture (config only)
+├── inference/          # Inference
+│   ├── engine.py       # Loads weights+tokenizer; honest generate()
+│   ├── api_v2.py       # FastAPI server (port 8002) over the real model
 │   ├── api_server.py   # v1 API (Ollama-backed, port 8001)
-│   ├── api_v2.py       # v2 API (PyTorch model + Hermes, port 8002)
-│   ├── solid_llm.py    # Core LLM wrapper (Ollama subprocess)
-│   └── local_hermes.py # Local Hermes 3 inference (transformers)
-├── training/           # Training scripts
-│   ├── solid_llm_model.py  # Transformer model definition
-│   ├── train.py        # Full training pipeline
-│   └── train_simple.py # Simplified training (719K param model)
-├── services/           # Background services
-│   ├── solid_logic.py      # v1: Autonomous agency (local Hermes)
-│   ├── solid_logic_v2.py   # v2: OpenRouter-backed agency
-│   └── solid_logic_v2_1.py # v2.1: Production agency with task queue
-├── web/                # Web frontend
-│   ├── api.php         # Cloud API (OpenRouter via PHP)
-│   ├── api-v2.php      # v2 API with Hermes enhancement
-│   └── index.html      # Landing page
-├── cgi-bin/            # CGI deployment scripts
-│   └── solid-llm.cgi   # cPanel CGI interface
-├── models/             # Trained model weights
-│   └── solid-llm-v2-simple.pth
+│   └── local_hermes.py # Optional local Hermes 3 inference (transformers)
+├── services/           # Background/agency services (OpenRouter-backed)
+│   ├── solid_logic.py
+│   ├── solid_logic_v2.py
+│   └── solid_logic_v2_1.py
+├── models/             # Trained artefacts
+│   ├── solid-llm-char.pth  # Shipped from-scratch checkpoint (~13MB)
+│   ├── tokenizer.json      # Character vocabulary
+│   └── config.json         # Model hyper-parameters
 └── requirements.txt    # Python dependencies
+```
+
+## Train it yourself
+
+```bash
+python data/build_corpus.py      # build data/corpus.txt (first-party text)
+python training/train.py         # ~a few minutes on CPU; writes models/*
+```
+
+## Run the inference API
+
+```bash
+uvicorn inference.api_v2:app --host 0.0.0.0 --port 8002
+# quick local check:
+python inference/engine.py
+
+curl -X POST http://localhost:8002/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"SolidAI helps farmers","max_tokens":120,"temperature":0.7}'
 ```
 
 ## Quick Start
@@ -57,10 +79,10 @@ python inference/api_server.py
 # → http://localhost:8001
 ```
 
-**v2 API (PyTorch model + Hermes):**
+**v2 API (our from-scratch model):**
 ```bash
 python inference/api_v2.py
-# → http://localhost:8002
+# → http://localhost:8002  (serves models/solid-llm-char.pth)
 ```
 
 **Solid Logic v2.1 (Autonomous Agency):**
@@ -90,14 +112,16 @@ curl -X POST http://localhost:8001/generate \
 
 ## Training
 
-Train the simple model from scratch:
+Train the from-scratch character model (see "Train it yourself" above):
 
 ```bash
-cd training
-python train_simple.py
+python data/build_corpus.py
+python training/train.py --steps 2000
 ```
 
-This creates a 719K-parameter transformer trained on a custom dataset.
+This creates a ~3.2M-parameter decoder-only transformer trained on a first-party
+Solid Solutions corpus, and writes `models/solid-llm-char.pth`, `tokenizer.json`,
+and `config.json`.
 
 ## Configuration
 

@@ -20,6 +20,9 @@ models/*.pt
 models/*.bin
 models/*.gguf
 models/*.safetensors
+# ...except the shipped from-scratch research-preview checkpoint (~13MB), so the
+# model works out of the box without a training step.
+!models/solid-llm-char.pth
 
 # IDE
 .vscode/
