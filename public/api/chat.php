@@ -42,7 +42,7 @@ if ($api_key === '') {
 
 $model = getenv('SOLID_LLM_MODEL') ?: 'meta-llama/llama-3.3-70b-instruct';
 
-// --- Grounding: keep in sync with api/_context.ts / packages/llm/data/knowledge.md
+// --- Grounding: keep in sync with api/chat.ts / packages/llm/data/knowledge.md
 $knowledge = <<<'TXT'
 Solid Solutions is a technology initiative focused on Africa's digital future. It works on experimental AI and infrastructure projects. Contact: info@solidsolutions.africa. Website: solidsolutions.africa.
 SolidAI is the applied-AI program of Solid Solutions, focused on hyper-local NLP for African dialects, edge efficiency for low-power hardware, and a privacy-first approach. SolidAI is in beta; developers can request early access to its APIs and models.
