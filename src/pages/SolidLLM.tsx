@@ -16,6 +16,7 @@ import {
   Code
 } from "lucide-react";
 import Footer from '../components/Footer';
+import SolidLLMDemo from '../components/SolidLLMDemo';
 import { useState, useEffect, MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Lenis from "lenis";
@@ -70,8 +71,8 @@ export default function SolidLLM() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
             <a href="/solid-llm/about" className="hover:text-charcoal transition-colors">About</a>
             <a href="#features" className="hover:text-charcoal transition-colors">Features</a>
-            <a href="#capabilities" className="hover:text-charcoal transition-colors">Capabilities</a>
             <a href="#architecture" className="hover:text-charcoal transition-colors">Architecture</a>
+            <a href="#try" className="hover:text-charcoal transition-colors">Try It</a>
             <a href="/" onClick={handleBack} className="px-5 py-2 border border-charcoal text-charcoal rounded-full hover:bg-charcoal hover:text-white transition-all">
               Back to Home
             </a>
@@ -230,6 +231,9 @@ export default function SolidLLM() {
           </div>
         </div>
       </section>
+
+      {/* Live demo of the from-scratch model */}
+      <SolidLLMDemo />
 
       {/* Call to Action */}
       <section className="py-24 bg-charcoal text-white">

@@ -1,127 +1,125 @@
 """
-Solid LLM v2.0 - Hermes-Powered Inference API
-Combines our trained model + Hermes Agent intelligence
+Solid LLM - Inference API (FastAPI).
+
+Serves the real, from-scratch character-level model over HTTP. Every response is
+produced by the trained weights via the honest pipeline in inference/engine.py:
+
+    prompt -> tokenizer.encode -> model.generate -> tokenizer.decode -> text
+
+Run:
+    uvicorn inference.api_v2:app --host 0.0.0.0 --port 8002
+    # or: python inference/api_v2.py
+
+Endpoints:
+    GET  /            service info
+    GET  /health      health + model-loaded flag
+    GET  /model/info  real model metadata
+    POST /generate    { prompt, max_tokens?, temperature?, top_k? } -> text
 """
 
+from __future__ import annotations
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import torch
-import subprocess
-import json
-from pathlib import Path
-from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from inference.engine import get_engine, SolidLLMEngine
 
 app = FastAPI(
-    title="Solid LLM v2.0 API",
-    description="Our LLM from Scratch - Hermes-Powered",
-    version="2.0.0"
+    title="Solid LLM API",
+    description="Solid Solutions' from-scratch character-level language model.",
+    version="3.0.0",
 )
 
-# Load trained model
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Load the model once at startup. If the checkpoint is missing we keep the API
+# up but report model_loaded=False instead of pretending to work.
+_engine: SolidLLMEngine | None = None
+_load_error: str | None = None
 try:
-    from training.train_simple import SimpleSolidLLM
-    _repo_root = Path(__file__).resolve().parent.parent
-    model = SimpleSolidLLM(vocab_size=1000, d_model=128, n_layers=2, n_heads=2)
-    _ckpt = _repo_root / "models" / "solid-llm-v2-simple.pth"
-    try:
-        model.load_state_dict(torch.load(_ckpt))
-        model.eval()
-        print("Solid LLM v2.0 loaded SUCCESSFULLY!")
-    except FileNotFoundError:
-        print(f"Model checkpoint not found at {_ckpt}; serving with untrained weights.")
-        model = None
-except Exception as e:
-    print(f"Model load error: {e}")
-    model = None
+    _engine = get_engine()
+    print(f"Solid LLM loaded: {_engine.num_params:,} params, vocab {_engine.tokenizer.vocab_size}")
+except Exception as exc:  # noqa: BLE001
+    _load_error = str(exc)
+    print(f"Solid LLM NOT loaded: {exc}")
+
 
 class GenerateRequest(BaseModel):
-    prompt: str
-    max_tokens: int = 100
-    temperature: float = 0.7
-    use_hermes: bool = True
+    prompt: str = Field(..., min_length=1)
+    max_tokens: int = Field(200, ge=1, le=1000)
+    temperature: float = Field(0.8, ge=0.0, le=2.0)
+    top_k: int = Field(40, ge=0, le=1000)
+
 
 @app.get("/")
 async def root():
     return {
-        "message": "Solid LLM v2.0 - Built from Scratch",
-        "tagline": "Our own LLM, powered by Hermes Intelligence",
+        "name": "Solid LLM",
+        "description": "From-scratch character-level transformer by Solid Solutions",
+        "note": "Small research-preview model. Real weights, real generation.",
         "built_by": "Solid Solutions",
-        "hermes_powered": True
+        "docs": "/docs",
     }
+
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "model_loaded": model is not None}
+    return {"status": "healthy", "model_loaded": _engine is not None, "error": _load_error}
+
 
 @app.get("/model/info")
 async def model_info():
+    if _engine is None:
+        raise HTTPException(status_code=503, detail=f"model not loaded: {_load_error}")
+    cfg = _engine.config
     return {
-        "name": "Solid LLM",
-        "version": "2.0.0",
-        "architecture": "Transformer (from scratch)",
-        "parameters": "719,081",
-        "training": "Custom dataset + 5 epochs",
-        "hermes_intelligence": "ENABLED (weight=1.5)",
+        "name": "Solid LLM (char-level research preview)",
+        "version": "3.0.0",
+        "architecture": "Decoder-only transformer (causal self-attention), built from scratch in PyTorch",
+        "parameters": _engine.num_params,
+        "vocab_size": _engine.tokenizer.vocab_size,
+        "context_length": cfg.block_size,
+        "n_layer": cfg.n_layer,
+        "n_head": cfg.n_head,
+        "n_embd": cfg.n_embd,
+        "tokenizer": "character-level",
+        "training_data": "first-party Solid Solutions corpus",
         "built_by": "Solid Solutions",
-        "capabilities": [
-            "Neural network from scratch",
-            "Hermes Agent reasoning",
-            "Multi-model intelligence",
-            "Continuous learning"
-        ]
     }
+
 
 @app.post("/generate")
 async def generate(request: GenerateRequest):
-    """Generate text using our LLM + Hermes"""
+    if _engine is None:
+        raise HTTPException(status_code=503, detail=f"model not loaded: {_load_error}")
     try:
-        # Step 1: Get Hermes reasoning (Hermes Intelligence)
-        hermes_reasoning = ""
-        if request.use_hermes:
-            try:
-                import shutil
-                hermes_bin = shutil.which("hermes") or "/home/yassin/.hermes/hermes-agent/venv/bin/hermes"
-                result = subprocess.run(
-                    [hermes_bin, "chat", "-q",
-                     f"Provide intelligent reasoning for: {request.prompt}"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                hermes_reasoning = result.stdout.strip()
-            except:
-                hermes_reasoning = "Hermes offline"
-        
-        # Step 2: Our LLM generates (simplified)
-        if model:
-            # Simplified generation (real: tokenize properly)
-            input_tensor = torch.randint(0, 1000, (1, 10))
-            with torch.no_grad():
-                output = model.generate(input_tensor, max_new_tokens=20)
-            
-            llm_response = f"[Solid LLM neural output] Processed {request.prompt[:30]}..."
-        else:
-            llm_response = "Model not loaded"
-        
-        # Step 3: Combine LLM + Hermes
-        combined_response = f"{llm_response}\n\n[Hermes Intelligence]: {hermes_reasoning}"
-        
+        completion = _engine.generate(
+            request.prompt,
+            max_new_tokens=request.max_tokens,
+            temperature=request.temperature,
+            top_k=request.top_k if request.top_k > 0 else None,
+        )
         return {
-            "model": "Solid LLM v2.0 (Hermes-Powered)",
+            "model": "Solid LLM (char-level research preview)",
             "prompt": request.prompt,
-            "response": combined_response,
-            "hermes_used": request.use_hermes,
-            "success": True,
-            "built_by": "Solid Solutions"
+            "completion": completion,
+            "text": request.prompt + completion,
+            "built_by": "Solid Solutions",
         }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(exc))
+
 
 if __name__ == "__main__":
     import uvicorn
-    print("\n" + "="*60)
-    print("Solid LLM v2.0 - Hermes-Powered API")
-    print("Built from Scratch by Solid Solutions")
-    print("="*60 + "\n")
+
+    print("\n" + "=" * 60)
+    print("Solid LLM API - from-scratch model by Solid Solutions")
+    print("=" * 60 + "\n")
     uvicorn.run(app, host="0.0.0.0", port=8002)

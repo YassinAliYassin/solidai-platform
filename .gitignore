@@ -12,7 +12,11 @@ coverage/
 # Monorepo packages
 packages/**/node_modules/
 packages/**/venv/
+packages/**/.venv/
 packages/**/env/
+
+# Server-side assistant key (never commit)
+public/api/config.local.php
 packages/**/__pycache__/
 packages/**/*.pyc
 packages/**/.next/

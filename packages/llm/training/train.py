@@ -1,126 +1,129 @@
 """
-Solid LLM v2.0 - Training Script
-Train our LLM with custom dataset + Hermes intelligence
+Solid LLM - training script (real, from scratch).
+
+Trains the character-level SolidLLM (training/model.py) on the first-party
+corpus (data/corpus.txt). Saves three artefacts into models/:
+
+  * solid-llm-char.pth  - model weights (state_dict)
+  * tokenizer.json      - the character vocabulary
+  * config.json         - the model hyper-parameters
+
+Run:  python training/train.py            # default ~1500 steps
+      python training/train.py --steps 3000 --block-size 128
+
+Everything runs on CPU in a few minutes for the default size.
 """
 
-import sys
-import os
-from pathlib import Path as _Path
+from __future__ import annotations
 
-_REPO_ROOT = _Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
 
 import torch
-import torch.nn as nn
-from training.solid_llm_model import SolidLLM, SolidLLMConfig
-from torch.utils.data import Dataset, DataLoader
-import json
 
-class SolidDataset(Dataset):
-    """Custom dataset for Solid LLM training"""
-    def __init__(self, texts, tokenizer, max_length=512):
-        self.texts = texts
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-        
-    def __len__(self):
-        return len(self.texts)
-    
-    def __getitem__(self, idx):
-        text = self.texts[idx]
-        # Simplified tokenization (real: use proper tokenizer)
-        tokens = [ord(c) % 32000 for c in text[:self.max_length]]
-        tokens += [0] * (self.max_length - len(tokens))  # Pad
-        
-        return {
-            'input_ids': torch.tensor(tokens),
-            'labels': torch.tensor(tokens[1:] + [0])  # Shift for causal LM
-        }
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
 
-class SolidTrainer:
-    """Train Solid LLM with Hermes intelligence"""
-    
-    def __init__(self, model, train_dataloader, device='cpu'):
-        self.model = model.to(device)
-        self.train_dataloader = train_dataloader
-        self.device = device
-        self.optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
-        self.loss_fn = nn.CrossEntropyLoss()
-        
-    def train(self, epochs=3):
-        """Train the model"""
-        self.model.train()
-        
-        for epoch in range(epochs):
-            total_loss = 0
-            num_batches = 0
-            
-            for batch in self.train_dataloader:
-                input_ids = batch['input_ids'].to(self.device)
-                labels = batch['labels'].to(self.device)
-                
-                # Forward pass
-                logits = self.model(input_ids)
-                loss = self.loss_fn(
-                    logits.view(-1, logits.size(-1)),
-                    labels.view(-1)
-                )
-                
-                # Backward pass
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                
-                total_loss += loss.item()
-                num_batches += 1
-                
-            avg_loss = total_loss / num_batches
-            print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
-            
-        print("\nTraining COMPLETE!")
+from training.model import SolidLLM, SolidLLMConfig  # noqa: E402
+from training.tokenizer import CharTokenizer  # noqa: E402
 
-def create_sample_data():
-    """Create sample training data for Solid LLM"""
-    return [
-        "Solid LLM is an AI model built by Solid Solutions.",
-        "Hermes Agent provides intelligence to Solid LLM.",
-        "We build AI from scratch with transformer architecture.",
-        "Solid Solutions creates powerful AI tools for everyone.",
-        "Our LLM uses Hermes as the reasoning engine.",
-        "Transformers are the foundation of modern language models.",
-    ] * 100  # Multiply for more training data
+DATA = _REPO_ROOT / "data" / "corpus.txt"
+MODELS = _REPO_ROOT / "models"
+CKPT = MODELS / "solid-llm-char.pth"
+TOK_PATH = MODELS / "tokenizer.json"
+CFG_PATH = MODELS / "config.json"
+
+
+def get_batch(data: torch.Tensor, block_size: int, batch_size: int):
+    ix = torch.randint(0, len(data) - block_size - 1, (batch_size,))
+    x = torch.stack([data[i : i + block_size] for i in ix])
+    y = torch.stack([data[i + 1 : i + 1 + block_size] for i in ix])
+    return x, y
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--steps", type=int, default=1500)
+    ap.add_argument("--batch-size", type=int, default=32)
+    ap.add_argument("--block-size", type=int, default=128)
+    ap.add_argument("--n-embd", type=int, default=256)
+    ap.add_argument("--n-layer", type=int, default=4)
+    ap.add_argument("--n-head", type=int, default=4)
+    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--seed", type=int, default=1337)
+    args = ap.parse_args()
+
+    torch.manual_seed(args.seed)
+    MODELS.mkdir(exist_ok=True)
+
+    if not DATA.exists():
+        print("corpus not found; building it...")
+        sys.path.insert(0, str(_REPO_ROOT / "data"))
+        import build_corpus  # type: ignore
+
+        build_corpus.main()
+
+    text = DATA.read_text(encoding="utf-8")
+    tokenizer = CharTokenizer.from_text(text)
+    tokenizer.save(TOK_PATH)
+
+    data = torch.tensor(tokenizer.encode(text), dtype=torch.long)
+    n = int(0.9 * len(data))
+    train_data, val_data = data[:n], data[n:]
+    print(f"corpus: {len(data):,} tokens | vocab: {tokenizer.vocab_size}")
+
+    cfg = SolidLLMConfig(
+        vocab_size=tokenizer.vocab_size,
+        block_size=args.block_size,
+        n_layer=args.n_layer,
+        n_head=args.n_head,
+        n_embd=args.n_embd,
+    )
+    model = SolidLLM(cfg)
+    print(f"model: {model.num_params():,} parameters")
+
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
+
+    @torch.no_grad()
+    def estimate_val_loss(iters: int = 20) -> float:
+        model.eval()
+        losses = []
+        for _ in range(iters):
+            xb, yb = get_batch(val_data, cfg.block_size, args.batch_size)
+            _, loss = model(xb, yb)
+            losses.append(loss.item())
+        model.train()
+        return sum(losses) / len(losses)
+
+    print(f"training for {args.steps} steps...")
+    t0 = time.time()
+    model.train()
+    for step in range(1, args.steps + 1):
+        xb, yb = get_batch(train_data, cfg.block_size, args.batch_size)
+        _, loss = model(xb, yb)
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        if step % 200 == 0 or step == 1:
+            vl = estimate_val_loss()
+            dt = time.time() - t0
+            print(f"step {step:>5}/{args.steps} | train {loss.item():.3f} | val {vl:.3f} | {dt:.0f}s")
+
+    torch.save(model.state_dict(), CKPT)
+    CFG_PATH.write_text(json.dumps(cfg.to_dict(), indent=2), encoding="utf-8")
+    print(f"\nsaved: {CKPT.name}, {TOK_PATH.name}, {CFG_PATH.name}")
+
+    # sample generation
+    print("\n--- sample generation ---")
+    prompt = "Solid Solutions"
+    idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long)
+    out = model.generate(idx, max_new_tokens=200, temperature=0.8, top_k=40)
+    print(tokenizer.decode(out[0].tolist()))
+
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Solid LLM v2.0 - Training Pipeline")
-    print("=" * 60)
-    
-    # Initialize model
-    config = SolidLLMConfig(
-        vocab_size=32000,
-        hidden_size=256,
-        num_hidden_layers=4,
-        num_attention_heads=4,
-        use_hermes_intelligence=True
-    )
-    
-    model = SolidLLM(config)
-    print(f"\nModel initialized: {sum(p.numel() for p in model.parameters()):,} parameters")
-    
-    # Create dataset
-    texts = create_sample_data()
-    dataset = SolidDataset(texts, tokenizer=None)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
-    
-    print(f"Training samples: {len(dataset)}")
-    print(f"Hermes Intelligence: ENABLED\n")
-    
-    # Train
-    trainer = SolidTrainer(model, dataloader)
-    print("Starting training...\n")
-    trainer.train(epochs=3)
-    
-    # Save model
-    torch.save(model.state_dict(), str(_REPO_ROOT / "models" / "solid-llm-v2.pth"))
-    print(f"\nModel saved to: {_REPO_ROOT / 'models' / 'solid-llm-v2.pth'}")
-    print("\nSolid LLM v2.0 - TRAINED AND READY!")
+    main()
