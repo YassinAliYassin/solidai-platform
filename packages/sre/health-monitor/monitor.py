@@ -115,7 +115,7 @@ PUBLIC_ENDPOINTS = [
     {
         "name": "SolidAI",
         "type": "http",
-        "url": "https://solidai.africa",
+        "url": os.getenv("SOLIDAI_PUBLIC_URL", "https://solidai.solidsolutions.africa"),
         "timeout": 10.0,
     },
 ]

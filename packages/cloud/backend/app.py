@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import chat, hermes
+from whatsapp_queue import router as whatsapp_router
 
 app = FastAPI(title="Solid Cloud AI Hub", version="1.0.0")
 
@@ -22,3 +23,4 @@ async def health():
 
 app.include_router(chat.router)
 app.include_router(hermes.router)
+app.include_router(whatsapp_router)
