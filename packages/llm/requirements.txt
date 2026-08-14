@@ -16,7 +16,7 @@ torch>=2.13.0
 numpy>=1.24.0
 
 # --- Local model inference (inference/local_hermes.py imports this directly) ---
-transformers>=4.36.0
+transformers>=5.15.0
 tokenizers>=0.15.0
 sentencepiece>=0.1.99
 
