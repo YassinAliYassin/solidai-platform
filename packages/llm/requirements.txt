@@ -6,7 +6,7 @@
 # plus torch; the local-Hermes engine additionally needs transformers.
 
 # --- Runtime (FastAPI/OpenRouter services) ---
-fastapi>=0.100.0
+fastapi>=0.141.1
 uvicorn[standard]>=0.23.0
 pydantic>=2.0.0
 requests>=2.31.0
