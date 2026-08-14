@@ -8,7 +8,7 @@
 # --- Runtime (FastAPI/OpenRouter services) ---
 fastapi>=0.141.1
 uvicorn[standard]>=0.23.0
-pydantic>=2.0.0
+pydantic>=2.13.4
 requests>=2.34.2
 
 # --- Core ML (required by training/* and inference/local_hermes.py) ---
