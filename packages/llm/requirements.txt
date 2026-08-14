@@ -17,7 +17,7 @@ numpy>=1.24.0
 
 # --- Local model inference (inference/local_hermes.py imports this directly) ---
 transformers>=4.36.0
-tokenizers>=0.15.0
+tokenizers>=0.23.1
 sentencepiece>=0.1.99
 
 # --- Optional: training helpers / 4-bit quantization (uncomment if used) ---
