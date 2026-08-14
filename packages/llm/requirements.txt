@@ -13,7 +13,7 @@ requests>=2.31.0
 
 # --- Core ML (required by training/* and inference/local_hermes.py) ---
 torch>=2.0.0
-numpy>=1.24.0
+numpy>=2.5.2
 
 # --- Local model inference (inference/local_hermes.py imports this directly) ---
 transformers>=4.36.0
