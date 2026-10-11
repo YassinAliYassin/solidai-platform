@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^7.3.1",
-    "@fortawesome/react-fontawesome": "^3.3.1",
+    "@fortawesome/react-fontawesome": "^3.5.0",
     "@tailwindcss/vite": "^4.3.3",
     "dotenv": "^17.2.3",
     "framer-motion": "^13.1.0",
