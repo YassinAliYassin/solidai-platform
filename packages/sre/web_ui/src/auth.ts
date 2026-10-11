@@ -8,11 +8,11 @@ function getCustomOIDCProvider() {
   const issuer = process.env.OIDC_ISSUER;
   const clientId = process.env.OIDC_CLIENT_ID;
   const clientSecret = process.env.OIDC_CLIENT_SECRET;
-  
+
   if (!issuer || !clientId || !clientSecret) {
     return null;
   }
-  
+
   return {
     id: "custom-oidc",
     name: process.env.OIDC_PROVIDER_NAME || "SSO",
@@ -35,7 +35,7 @@ function getCustomOIDCProvider() {
 // Build providers list based on env config
 function getProviders() {
   const providers: any[] = [];
-  
+
   // Google
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     providers.push(Google({
@@ -43,7 +43,7 @@ function getProviders() {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }));
   }
-  
+
   // Microsoft Entra ID (Azure AD)
   if (process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET && process.env.AZURE_AD_TENANT_ID) {
     providers.push(MicrosoftEntraID({
@@ -52,15 +52,20 @@ function getProviders() {
       issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }));
   }
-  
+
   // Custom OIDC (Okta, Keycloak, Auth0, etc.)
   const customOIDC = getCustomOIDCProvider();
   if (customOIDC) {
     providers.push(customOIDC);
   }
-  
+
   return providers;
 }
+
+// Trust the incoming host only when explicitly enabled. The checked-in
+// compose service sets AUTH_TRUST_HOST=true because it has no fixed AUTH_URL.
+// Leave this unset (or set AUTH_URL) everywhere else.
+const trustHost = process.env.AUTH_TRUST_HOST === "true";
 
 const config: NextAuthConfig = {
   providers: getProviders(),
@@ -71,7 +76,8 @@ const config: NextAuthConfig = {
   // },
   callbacks: {
     async jwt({ token, account, profile }) {
-      // On initial sign in, store provider info
+      // Provider tokens stay inside the encrypted JWT cookie. They are not
+      // copied onto the client session object returned by /api/auth/session.
       if (account) {
         token.accessToken = account.access_token;
         token.idToken = account.id_token;
@@ -84,9 +90,6 @@ const config: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      // Make tokens available to the client session
-      session.accessToken = token.accessToken as string | undefined;
-      session.idToken = token.idToken as string | undefined;
       session.provider = token.provider as string | undefined;
       return session;
     },
@@ -95,17 +98,21 @@ const config: NextAuthConfig = {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
-  trustHost: true,
+  trustHost,
 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth(config);
 
-// Type augmentation for session
 declare module "next-auth" {
   interface Session {
+    provider?: string;
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
     accessToken?: string;
     idToken?: string;
     provider?: string;
   }
 }
-

@@ -14,6 +14,13 @@ const eslintConfig = defineConfig([
   //   escaping); downgrade to warning so it doesn't block CI.
   // - react-hooks/set-state-in-effect and react-hooks/purity are newer React 19
   //   rules that flag normal mount-time state sync; downgrade to warning.
+  // - eslint-config-next 16.4 also errors on React Compiler rules
+  //   (preserve-manual-memoization, immutability, static-components, refs).
+  //   The compiler itself is not enabled in next.config.ts, and these flag
+  //   existing patterns (manual useCallback deps, helpers declared after the
+  //   effect that calls them, inline presentational components, latest-ref
+  //   updates). Keep them visible as warnings so the lint gate stays about
+  //   real defects.
   //   NOTE: react-hooks/rules-of-hooks is intentionally LEFT as an error —
   //   it catches genuine hook-order bugs (see SignInGate fix).
   {
@@ -23,6 +30,10 @@ const eslintConfig = defineConfig([
       "react/no-unescaped-entities": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/purity": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/refs": "warn",
     },
   },
   // Override default ignores of eslint-config-next.

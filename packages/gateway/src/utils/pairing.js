@@ -1,10 +1,6 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-
-const PAIRING_FILE = path.join(process.env.HOME, '.solidai', 'pairing.json');
-
-// Admin user who is allowed to approve pairing codes.
-const OWNER_ID = parseInt(process.env.OWNER_TELEGRAM_ID || '1292960246', 10);
 
 // Pairing code lifetime (ms). Codes older than this are rejected.
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -13,6 +9,36 @@ const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_LIMIT_MS = 60 * 1000; // at most one code per minute per user
 const rateState = {}; // userId -> last issued timestamp
 
+function stateDir() {
+  if (process.env.SOLIDAI_STATE_DIR) return process.env.SOLIDAI_STATE_DIR;
+  return path.join(process.env.HOME || os.tmpdir(), '.solidai');
+}
+
+function pairingFile() {
+  return path.join(stateDir(), 'pairing.json');
+}
+
+// Numeric Telegram user id, or null when unset or not a plain integer.
+// There is no built-in default approver.
+function resolveOwnerId(env = process.env) {
+  const raw = env.OWNER_TELEGRAM_ID;
+  if (raw == null) return null;
+  const value = String(raw).trim();
+  if (!/^[1-9][0-9]*$/.test(value)) return null;
+  return value;
+}
+
+function ownerConfigurationError(env = process.env) {
+  const raw = env.OWNER_TELEGRAM_ID;
+  if (raw == null || String(raw).trim() === '') {
+    return 'OWNER_TELEGRAM_ID is not set. Pairing approval is disabled; no default approver is configured.';
+  }
+  if (!resolveOwnerId(env)) {
+    return 'OWNER_TELEGRAM_ID must be a numeric Telegram user id. Pairing approval is disabled.';
+  }
+  return null;
+}
+
 class PairingManager {
   constructor() {
     this.pairingData = this.loadPairingData();
@@ -20,14 +46,16 @@ class PairingManager {
 
   loadPairingData() {
     try {
-      return JSON.parse(fs.readFileSync(PAIRING_FILE, 'utf8'));
+      return JSON.parse(fs.readFileSync(pairingFile(), 'utf8'));
     } catch (err) {
       return { pending: {}, approved: {} };
     }
   }
 
   savePairingData() {
-    fs.writeFileSync(PAIRING_FILE, JSON.stringify(this.pairingData, null, 2));
+    const file = pairingFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(this.pairingData, null, 2));
   }
 
   generatePairingCode(channel, userId) {
@@ -48,11 +76,14 @@ class PairingManager {
     return code;
   }
 
-  // Only an admin (OWNER_ID) may approve. `approverId` is the Telegram user id
-  // of whoever issued /approve (or the admin's id for the HTTP endpoint).
+  // Only the configured owner may approve. `approverId` is the Telegram user id
+  // of whoever issued /approve (or OWNER_TELEGRAM_ID for the HTTP endpoint,
+  // which has already checked PAIRING_ADMIN_SECRET).
   approvePairing(code, approverId) {
-    if (parseInt(approverId, 10) !== OWNER_ID) {
-      return false; // not authorized to approve
+    const ownerId = resolveOwnerId();
+    if (!ownerId) return false;
+    if (String(approverId == null ? '' : approverId).trim() !== ownerId) {
+      return false;
     }
 
     const pending = this.pairingData.pending[code];
@@ -83,4 +114,9 @@ class PairingManager {
   }
 }
 
-module.exports = new PairingManager();
+const pairing = new PairingManager();
+pairing.resolveOwnerId = resolveOwnerId;
+pairing.ownerConfigurationError = ownerConfigurationError;
+pairing.PairingManager = PairingManager;
+
+module.exports = pairing;

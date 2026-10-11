@@ -1,7 +1,5 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { Bot } = require('node-telegram-bot-api');
 const pairing = require('../utils/pairing');
-const fs = require('fs');
-const path = require('path');
 
 class TelegramChannel {
   constructor() {
@@ -10,14 +8,15 @@ class TelegramChannel {
     if (!this.token) {
       throw new Error('TELEGRAM_BOT_TOKEN is not set in the environment');
     }
-    this.bot = new TelegramBot(this.token); // No polling
+    // Construct only. Polling is not started; updates arrive via the webhook route.
+    this.bot = new Bot(this.token);
     this.sectorAgents = {}; // Loaded from gateway
     this.userSectors = {}; // Track user's current sector
     this.setupHandlers();
   }
 
   handleUpdate(update) {
-    this.bot.processUpdate(update);
+    return this.bot.handleUpdate(update);
   }
 
   setAgents(agents) {
@@ -25,85 +24,79 @@ class TelegramChannel {
   }
 
   setupHandlers() {
-    // Handle /start command
-    this.bot.onText(/\/start/, (msg) => {
-      const chatId = msg.chat.id;
-      const userId = msg.from.id.toString();
+    this.bot.command('start', async (ctx) => {
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
 
       if (!pairing.isApproved('telegram', userId)) {
         try {
           const code = pairing.generatePairingCode('telegram', userId);
-          this.bot.sendMessage(chatId, `Welcome to SolidAI! Your pairing code is: ${code}\nAsk admin to approve with /approve ${code}`);
+          await ctx.reply(`Welcome to SolidAI! Your pairing code is: ${code}\nAsk admin to approve with /approve ${code}`);
         } catch (err) {
           if (err.message === 'RATE_LIMITED') {
-            this.bot.sendMessage(chatId, `Please wait ${err.retryAfter}s before requesting a new code.`);
+            await ctx.reply(`Please wait ${err.retryAfter}s before requesting a new code.`);
           } else {
-            this.bot.sendMessage(chatId, 'Could not generate a pairing code. Try again later.');
+            await ctx.reply('Could not generate a pairing code. Try again later.');
           }
         }
         return;
       }
 
-      this.bot.sendMessage(chatId, 'Welcome to SolidAI! Use /sector [name] to choose a sector (agriculture, fintech, health, etc.)');
+      await ctx.reply('Welcome to SolidAI! Use /sector [name] to choose a sector (agriculture, fintech, health, etc.)');
     });
 
-    // Handle /approve command (admin only)
-    this.bot.onText(/\/approve (.+)/, (msg, match) => {
-      const code = match[1];
-      const approverId = msg.from.id.toString();
-      if (pairing.approvePairing(code, approverId)) {
-        this.bot.sendMessage(msg.chat.id, 'Pairing approved! You can now use SolidAI.');
-      } else {
-        this.bot.sendMessage(msg.chat.id, 'Invalid pairing code or not authorized to approve.');
+    this.bot.command('approve', async (ctx) => {
+      const code = typeof ctx.match === 'string' ? ctx.match.trim() : '';
+      const approverId = ctx.from?.id?.toString();
+      if (!code || !approverId || !pairing.approvePairing(code, approverId)) {
+        await ctx.reply('Invalid pairing code or not authorized to approve.');
+        return;
       }
+      await ctx.reply('Pairing approved! You can now use SolidAI.');
     });
 
-    // Handle /sector command
-    this.bot.onText(/\/sector (.+)/, (msg, match) => {
-      const sector = match[1].toLowerCase();
-      const userId = msg.from.id.toString();
+    this.bot.command('sector', async (ctx) => {
+      const sector = (typeof ctx.match === 'string' ? ctx.match : '').trim().toLowerCase();
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
 
       if (!pairing.isApproved('telegram', userId)) {
-        this.bot.sendMessage(msg.chat.id, 'Please pair first with /start');
+        await ctx.reply('Please pair first with /start');
         return;
       }
 
       if (!this.sectorAgents[sector]) {
-        this.bot.sendMessage(msg.chat.id, `Unknown sector: ${sector}. Choose from: ${Object.keys(this.sectorAgents).join(', ')}`);
+        await ctx.reply(`Unknown sector: ${sector}. Choose from: ${Object.keys(this.sectorAgents).join(', ')}`);
         return;
       }
 
       this.userSectors[userId] = sector;
-      this.bot.sendMessage(msg.chat.id, `Switched to ${sector} sector. Ask your question!`);
+      await ctx.reply(`Switched to ${sector} sector. Ask your question!`);
     });
 
-    // Handle text messages
-    this.bot.on('message', async (msg) => {
-      const userId = msg.from.id.toString();
-      const chatId = msg.chat.id;
-      const text = msg.text;
-
-      // Skip commands
-      if (text.startsWith('/')) return;
+    this.bot.on('message', async (ctx) => {
+      const userId = ctx.from?.id?.toString();
+      const text = ctx.message?.text;
+      if (!userId || !text || text.startsWith('/')) return;
 
       if (!pairing.isApproved('telegram', userId)) {
-        this.bot.sendMessage(chatId, 'Please pair first with /start');
+        await ctx.reply('Please pair first with /start');
         return;
       }
 
-      const sector = this.userSectors[userId] || 'agriculture'; // Default to agriculture
+      const sector = this.userSectors[userId] || 'agriculture';
       const agent = this.sectorAgents[sector];
 
       if (!agent) {
-        this.bot.sendMessage(chatId, `No agent for sector: ${sector}`);
+        await ctx.reply(`No agent for sector: ${sector}`);
         return;
       }
 
       try {
         const result = await agent.handleQuery(text, userId);
-        this.bot.sendMessage(chatId, result.response);
+        await ctx.reply(result.response);
       } catch (err) {
-        this.bot.sendMessage(chatId, 'Error processing your query.');
+        await ctx.reply('Error processing your query.');
       }
     });
   }

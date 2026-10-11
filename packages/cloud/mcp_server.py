@@ -12,6 +12,8 @@ from mcp.server import Server
 from mcp.types import Tool, TextContent
 import mcp.server.stdio
 
+from mcp_auth import post_cloud_chat
+
 app = Server("solid-cloud")
 
 SOLID_CLOUD_URL = "http://localhost:8000"
@@ -61,7 +63,7 @@ async def call_tool(name: str, arguments: Any) -> Sequence[TextContent]:
         if name == "solid_cloud_chat":
             prompt = arguments.get("prompt")
             model = arguments.get("model", "anthropic/claude-sonnet-4")
-            resp = await client.post("/api/chat/query", json={"prompt": prompt, "model": model})
+            resp = await post_cloud_chat(client, prompt, model)
             return [TextContent(type="text", text=json.dumps(resp.json(), indent=2))]
         
         elif name == "solid_cloud_list_models":
