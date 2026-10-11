@@ -21,14 +21,21 @@ function App() {
     setLoading(true)
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const apiToken = import.meta.env.VITE_CLOUD_API_TOKEN
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`
+
       const res = await fetch('http://localhost:8000/api/chat/query', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ model, prompt: input })
       })
       
       const data = await res.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response || 'Error' }])
+      const content = res.ok
+        ? (data.response || 'Error')
+        : (typeof data.detail === 'string' ? data.detail : 'Request failed')
+      setMessages(prev => [...prev, { role: 'assistant', content }])
     } catch (error) {
       console.error(error)
     } finally {

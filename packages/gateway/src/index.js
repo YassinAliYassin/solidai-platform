@@ -5,10 +5,18 @@ const fs = require('fs');
 const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
-console.log('Loaded .env, ELEVENLABS_API_KEY starts with:', process.env.ELEVENLABS_API_KEY ? process.env.ELEVENLABS_API_KEY.substring(0, 10) + '...' : 'undefined');
+if (process.env.ELEVENLABS_API_KEY) {
+  console.log('ElevenLabs TTS: API key is set');
+} else {
+  console.warn('ElevenLabs TTS: ELEVENLABS_API_KEY is not set');
+}
 
 const pairing = require('./utils/pairing');
 const voiceManager = require('./utils/voice');
+const ownerWarning = pairing.ownerConfigurationError();
+if (ownerWarning) {
+  console.warn(ownerWarning);
+}
 const app = express();
 app.use(express.json());
 
@@ -72,7 +80,8 @@ app.get('/status', (req, res) => {
     },
     issues: [
       !config.agent.openrouterApiKey || config.agent.openrouterApiKey === 'YOUR_OPENROUTER_KEY' ? 'OpenRouter API key not configured' : null,
-      !process.env.ELEVENLABS_API_KEY ? 'ElevenLabs API key not set' : null
+      !process.env.ELEVENLABS_API_KEY ? 'ElevenLabs API key not set' : null,
+      pairing.ownerConfigurationError()
     ].filter(Boolean)
   };
   res.json(status);
@@ -133,7 +142,12 @@ app.post('/pairing/approve', (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Missing code' });
 
-  const success = pairing.approvePairing(code, process.env.OWNER_TELEGRAM_ID || '1292960246');
+  const ownerWarning = pairing.ownerConfigurationError();
+  if (ownerWarning) {
+    return res.status(503).json({ error: ownerWarning });
+  }
+
+  const success = pairing.approvePairing(code, process.env.OWNER_TELEGRAM_ID);
   if (success) {
     res.json({ status: 'approved' });
   } else {
